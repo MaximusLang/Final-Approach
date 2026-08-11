@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#070b12">
+    <meta name="description" content="Final Approach — Private Pilot checkride preparation mission control dashboard.">
+    <title>Final Approach | Checkride Mission Control</title>
+
+```
+<link rel="stylesheet" href="style.css">
+```
+
+</head>
+
+<body>
+    <div class="app-shell">
+
+```
+    <!-- =========================================================
+         HEADER / NAVIGATION
+         ========================================================= -->
+    <header id="appHeader" class="app-header">
+        <div class="header-brand">
+            <button
+                id="brandButton"
+                class="brand-button"
+                type="button"
+                aria-label="Return to mission control"
+            >
+                <span class="brand-mark" aria-hidden="true">
+                    <span class="brand-mark-line"></span>
+                    <span class="brand-mark-dot"></span>
+                </span>
+
+                <span class="brand-copy">
+                    <span class="brand-name">FINAL APPROACH</span>
+                    <span class="brand-subtitle">PRIVATE PILOT // MISSION CONTROL</span>
+                </span>
+            </button>
+        </div>
+
+        <nav id="mainNavigation" class="main-navigation" aria-label="Primary navigation">
+            <button id="navDashboard" class="nav-link active" type="button" data-section="dashboard">
+                Dashboard
+            </button>
+            <button id="navReading" class="nav-link" type="button" data-section="reading">
+                Reading
+            </button>
+            <button id="navAcs" class="nav-link" type="button" data-section="acs">
+                ACS
+            </button>
+            <button id="navPrepware" class="nav-link" type="button" data-section="prepware">
+                Prepware
+            </button>
+            <button id="navOral" class="nav-link" type="button" data-section="oral">
+                Mock Oral
+            </button>
+        </nav>
+
+        <div class="header-actions">
+            <button
+                id="notificationButton"
+                class="icon-button"
+                type="button"
+                aria-label="Open notifications"
+                aria-expanded="false"
+            >
+                <span class="icon icon-bell" aria-hidden="true"></span>
+                <span id="notificationBadge" class="notification-badge" hidden>0</span>
+            </button>
+
+            <button
+                id="settingsButton"
+                class="icon-button"
+                type="button"
+                aria-label="Open settings"
+                aria-controls="settingsModal"
+            >
+                <span class="icon icon-settings" aria-hidden="true"></span>
+            </button>
+        </div>
+    </header>
+
+
+    <!-- =========================================================
+         MAIN APPLICATION
+         ========================================================= -->
+    <main id="mainContent" class="main-content">
+
+        <!-- =====================================================
+             MISSION HERO
+             ===================================================== -->
+        <section id="missionSection" class="mission-section" aria-labelledby="missionTitle">
+
+            <div class="mission-primary">
+                <div class="eyebrow">
+                    <span class="status-indicator" aria-hidden="true"></span>
+                    <span id="missionStatusLabel">MISSION ACTIVE</span>
+                </div>
+
+                <h1 id="missionTitle">Final Approach</h1>
+
+                <p id="missionSubtitle" class="mission-subtitle">
+                    Private Pilot Checkride Preparation
+                </p>
+
+                <div class="mission-meta">
+                    <div class="mission-meta-item">
+                        <span class="meta-label">CHECKRIDE</span>
+                        <span id="checkrideDateDisplay" class="meta-value">AUG 31, 2026</span>
+                    </div>
+
+                    <div class="mission-meta-divider" aria-hidden="true"></div>
+
+                    <div class="mission-meta-item">
+                        <span class="meta-label">AIRCRAFT</span>
+                        <span id="aircraftDisplay" class="meta-value">PIPER WARRIOR</span>
+                    </div>
+
+                    <div class="mission-meta-divider" aria-hidden="true"></div>
+
+                    <div class="mission-meta-item">
+                        <span class="meta-label">MISSION DAY</span>
+                        <span id="missionDayDisplay" class="meta-value">DAY --</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="countdown-panel" id="countdownPanel">
+                <div class="panel-label">T− COUNTDOWN</div>
+
+                <div id="countdownDisplay" class="countdown-display" aria-live="polite">
+                    <div class="countdown-unit">
+                        <span id="countdownDays" class="countdown-number">--</span>
+                        <span class="countdown-label">DAYS</span>
+                    </div>
+
+                    <span class="countdown-separator" aria-hidden="true">:</span>
+
+                    <div class="countdown-unit">
+                        <span id="countdownHours" class="countdown-number">--</span>
+                        <span class="countdown-label">HRS</span>
+                    </div>
+
+                    <span class="countdown-separator" aria-hidden="true">:</span>
+
+                    <div class="countdown-unit">
+                        <span id="countdownMinutes" class="countdown-number">--</span>
+                        <span class="countdown-label">MIN</span>
+                    </div>
+
+                    <span class="countdown-separator countdown-seconds-separator" aria-hidden="true">:</span>
+
+                    <div class="countdown-unit countdown-seconds">
+                        <span id="countdownSeconds" class="countdown-number">--</span>
+                        <span class="countdown-label">SEC</span>
+                    </div>
+                </div>
+
+                <div id="countdownStatus" class="countdown-status">
+                    UNTIL CHECKRIDE
+                </div>
+            </div>
+        </section>
+
+
+        <!-- =====================================================
+             OVERALL PROGRESS
+             ===================================================== -->
+        <section id="overallProgressSection" class="dashboard-section overall-progress-section" aria-labelledby="overallProgressTitle">
+
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">MISSION READINESS</span>
+                    <h2 id="overallProgressTitle">Overall Progress</h2>
+                </div>
+
+                <div class="section-heading-actions">
+                    <span id="overallProgressPercentage" class="large-stat">0%</span>
+                    <span id="overallProgressLabel" class="progress-status-label">NOT STARTED</span>
+                </div>
+            </div>
+
+            <div class="overall-progress-track">
+                <div
+                    id="overallProgressBar"
+                    class="progress-fill"
+                    role="progressbar"
+                    aria-label="Overall checkride preparation progress"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="0"
+                ></div>
+            </div>
+
+            <div class="progress-metrics">
+                <span>
+                    <strong id="completedItemsCount">0</strong>
+                    <span>completed</span>
+                </span>
+
+                <span>
+                    <strong id="remainingItemsCount">0</strong>
+                    <span>remaining</span>
+                </span>
+
+                <span>
+                    <strong id="totalItemsCount">0</strong>
+                    <span>total items</span>
+                </span>
+
+                <span id="overallProgressMessage" class="progress-message">
+                    Begin today's mission.
+                </span>
+            </div>
+        </section>
+
+
+        <!-- =====================================================
+             TODAY'S MISSION
+             ===================================================== -->
+        <section id="todaysMissionSection" class="dashboard-section mission-card-section" aria-labelledby="todaysMissionTitle">
+
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">CURRENT SORTIE</span>
+                    <h2 id="todaysMissionTitle">Today's Mission</h2>
+                </div>
+
+                <button id="editMissionButton" class="text-button" type="button">
+                    Edit Mission
+                </button>
+            </div>
+
+            <article id="todaysMissionCard" class="todays-mission-card">
+
+                <div class="mission-card-header">
+                    <div class="mission-priority">
+                        <span id="missionPriorityIndicator" class="priority-indicator"></span>
+                        <span id="missionPriorityLabel">PRIMARY OBJECTIVE</span>
+                    </div>
+
+                    <span id="missionDateLabel" class="mission-date-label">
+                        AUG 11
+                    </span>
+                </div>
+
+                <div class="mission-card-body">
+                    <div class="mission-objective">
+                        <span class="objective-label">OBJECTIVE</span>
+                        <h3 id="todaysMissionObjective">
+                            Complete today's checkride preparation mission.
+                        </h3>
+                        <p id="todaysMissionDescription">
+                            Select a mission objective to begin.
+                        </p>
+                    </div>
+
+                    <div class="mission-card-progress">
+                        <div class="mini-progress-header">
+                            <span>MISSION COMPLETION</span>
+                            <strong id="todaysMissionProgressText">0%</strong>
+                        </div>
+
+                        <div class="mini-progress-track">
+                            <div
+                                id="todaysMissionProgressBar"
+                                class="progress-fill"
+                                role="progressbar"
+                                aria-label="Today's mission progress"
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                                aria-valuenow="0"
+                            ></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mission-card-footer">
+                    <div class="mission-stat">
+                        <span class="meta-label">TASKS</span>
+                        <strong id="todaysMissionTaskCount">0 / 0</strong>
+                    </div>
+
+                    <div class="mission-stat">
+                        <span class="meta-label">EST. TIME</span>
+                        <strong id="todaysMissionTime">--</strong>
+                    </div>
+
+                    <button id="startMissionButton" class="primary-button" type="button">
+                        <span>Start Mission</span>
+                        <span class="button-arrow" aria-hidden="true">→</span>
+                    </button>
+                </div>
+            </article>
+        </section>
+
+
+        <!-- =====================================================
+             STATISTICS
+             ===================================================== -->
+        <section id="statisticsSection" class="dashboard-section statistics-section" aria-labelledby="statisticsTitle">
+
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">FLIGHT DATA</span>
+                    <h2 id="statisticsTitle">Statistics</h2>
+                </div>
+            </div>
+
+            <div class="statistics-grid">
+
+                <article class="stat-card" id="statStudyStreakCard">
+                    <div class="stat-card-icon" aria-hidden="true">STK</div>
+                    <div class="stat-card-content">
+                        <span class="stat-label">STUDY STREAK</span>
+                        <strong id="studyStreakValue" class="stat-value">0</strong>
+                        <span id="studyStreakUnit" class="stat-unit">days</span>
+                    </div>
+                    <span id="studyStreakTrend" class="stat-trend">—</span>
+                </article>
+
+                <article class="stat-card" id="statStudyTimeCard">
+                    <div class="stat-card-icon" aria-hidden="true">TIME</div>
+                    <div class="stat-card-content">
+                        <span class="stat-label">STUDY TIME</span>
+                        <strong id="studyTimeValue" class="stat-value">0h</strong>
+                        <span id="studyTimeUnit" class="stat-unit">total</span>
+                    </div>
+                    <span id="studyTimeTrend" class="stat-trend">—</span>
+                </article>
+
+                <article class="stat-card" id="statQuestionsCard">
+                    <div class="stat-card-icon" aria-hidden="true">Q</div>
+                    <div class="stat-card-content">
+                        <span class="stat-label">QUESTIONS</span>
+                        <strong id="questionsAnsweredValue" class="stat-value">0</strong>
+                        <span id="questionsAnsweredUnit" class="stat-unit">answered</span>
+                    </div>
+                    <span id="questionsAccuracyValue" class="stat-trend">0%</span>
+                </article>
+
+                <article class="stat-card" id="statReadinessCard">
+                    <div class="stat-card-icon" aria-hidden="true">R</div>
+                    <div class="stat-card-content">
+                        <span class="stat-label">READINESS</span>
+                        <strong id="readinessValue" class="stat-value">0%</strong>
+                        <span id="readinessUnit" class="stat-unit">overall</span>
+                    </div>
+                    <span id="readinessStatus" class="stat-trend">BUILDING</span>
+                </article>
+
+            </div>
+        </section>
+
+
+        <!-- =====================================================
+             PREPARATION MODULE GRID
+             ===================================================== -->
+        <section id="preparationSection" class="dashboard-section preparation-section" aria-labelledby="preparationTitle">
+
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">TRAINING SYSTEMS</span>
+                    <h2 id="preparationTitle">Preparation Modules</h2>
+                </div>
+
+                <button id="viewAllModulesButton" class="text-button" type="button">
+                    View All
+                </button>
+            </div>
+
+
+            <div class="module-grid">
+
+                <!-- READING -->
+                <article id="readingModule" class="module-card">
+                    <div class="module-card-top">
+                        <div class="module-icon" aria-hidden="true">01</div>
+
+                        <div class="module-heading">
+                            <span class="module-kicker">KNOWLEDGE BASE</span>
+                            <h3>Reading</h3>
+                        </div>
+
+                        <button
+                            id="readingMenuButton"
+                            class="module-menu-button"
+                            type="button"
+                            aria-label="Reading module options"
+                        >
+                            <span aria-hidden="true">•••</span>
+                        </button>
+                    </div>
+
+                    <div class="module-card-content">
+                        <p id="readingModuleDescription">
+                            Required references, regulations, and study material.
+                        </p>
+
+                        <div class="module-progress">
+                            <div class="module-progress-header">
+                                <span>PROGRESS</span>
+                                <strong id="readingProgressPercentage">0%</strong>
+                            </div>
+
+                            <div class="progress-track">
+                                <div
+                                    id="readingProgressBar"
+                                    class="progress-fill"
+                                    role="progressbar"
+                                    aria-label="Reading progress"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100"
+                                    aria-valuenow="0"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="module-card-footer">
+                        <span id="readingCompletedCount">0 / 0 complete</span>
+                        <button id="openReadingButton" class="module-action-button" type="button">
+                            Open
+                        </button>
+                    </div>
+                </article>
+
+
+                <!-- ACS -->
+                <article id="acsModule" class="module-card">
+                    <div class="module-card-top">
+                        <div class="module-icon" aria-hidden="true">02</div>
+
+                        <div class="module-heading">
+                            <span class="module-kicker">STANDARDS</span>
+                            <h3>ACS</h3>
+                        </div>
+
+                        <button
+                            id="acsMenuButton"
+                            class="module-menu-button"
+                            type="button"
+                            aria-label="ACS module options"
+                        >
+                            <span aria-hidden="true">•••</span>
+                        </button>
+                    </div>
+
+                    <div class="module-card-content">
+                        <p id="acsModuleDescription">
+                            Airman Certification Standards tasks and proficiency tracking.
+                        </p>
+
+                        <div class="module-progress">
+                            <div class="module-progress-header">
+                                <span>PROGRESS</span>
+                                <strong id="acsProgressPercentage">0%</strong>
+                            </div>
+
+                            <div class="progress-track">
+                                <div
+                                    id="acsProgressBar"
+                                    class="progress-fill"
+                                    role="progressbar"
+                                    aria-label="ACS progress"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100"
+                                    aria-valuenow="0"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="module-card-footer">
+                        <span id="acsCompletedCount">0 / 0 complete</span>
+                        <button id="openAcsButton" class="module-action-button" type="button">
+                            Open
+                        </button>
+                    </div>
+                </article>
+
+
+                <!-- PREPWARE -->
+                <article id="prepwareModule" class="module-card">
+                    <div class="module-card-top">
+                        <div class="module-icon" aria-hidden="true">03</div>
+
+                        <div class="module-heading">
+                            <span class="module-kicker">KNOWLEDGE TEST</span>
+                            <h3>Prepware</h3>
+                        </div>
+
+                        <button
+                            id="prepwareMenuButton"
+                            class="module-menu-button"
+                            type="button"
+                            aria-label="Prepware module options"
+                        >
+                            <span aria-hidden="true">•••</span>
+                        </button>
+                    </div>
+
+                    <div class="module-card-content">
+                        <p id="prepwareModuleDescription">
+                            Practice questions, scores, weak areas, and test readiness.
+                        </p>
+
+                        <div class="module-progress">
+                            <div class="module-progress-header">
+                                <span>ACCURACY</span>
+                                <strong id="prepwareAccuracyPercentage">0%</strong>
+                            </div>
+
+                            <div class="progress-track">
+                                <div
+                                    id="prepwareProgressBar"
+                                    class="progress-fill"
+                                    role="progressbar"
+                                    aria-label="Prepware accuracy"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100"
+                                    aria-valuenow="0"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="module-card-footer">
+                        <span id="prepwareQuestionCount">0 questions</span>
+                        <button id="openPrepwareButton" class="module-action-button" type="button">
+                            Open
+                        </button>
+                    </div>
+                </article>
+
+
+                <!-- MOCK ORAL -->
+                <article id="oralModule" class="module-card">
+                    <div class="module-card-top">
+                        <div class="module-icon" aria-hidden="true">04</div>
+
+                        <div class="module-heading">
+                            <span class="module-kicker">ORAL EXAM</span>
+                            <h3>Mock Oral</h3>
+                        </div>
+
+                        <button
+                            id="oralMenuButton"
+                            class="module-menu-button"
+                            type="button"
+                            aria-label="Mock Oral module options"
+                        >
+                            <span aria-hidden="true">•••</span>
+                        </button>
+                    </div>
+
+                    <div class="module-card-content">
+                        <p id="oralModuleDescription">
+                            Simulated examiner questions and verbal knowledge evaluation.
+                        </p>
+
+                        <div class="module-progress">
+                            <div class="module-progress-header">
+                                <span>READINESS</span>
+                                <strong id="oralProgressPercentage">0%</strong>
+                            </div>
+
+                            <div class="progress-track">
+                                <div
+                                    id="oralProgressBar"
+                                    class="progress-fill"
+                                    role="progressbar"
+                                    aria-label="Mock oral readiness"
+                                    aria-valuemin="0"
+                                    aria-valuemax="100"
+                                    aria-valuenow="0"
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="module-card-footer">
+                        <span id="oralSessionCount">0 sessions</span>
+                        <button id="openOralButton" class="module-action-button" type="button">
+                            Open
+                        </button>
+                    </div>
+                </article>
+
+            </div>
+        </section>
+
+
+        <!-- =====================================================
+             FLIGHT REQUIREMENTS
+             ===================================================== -->
+        <section id="flightRequirementsSection" class="dashboard-section flight-requirements-section" aria-labelledby="flightRequirementsTitle">
+
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">AIRCRAFT READINESS</span>
+                    <h2 id="flightRequirementsTitle">Flight Requirements</h2>
+                </div>
+
+                <div class="section-heading-actions">
+                    <span id="flightRequirementsStatus" class="status-pill">0 / 0 COMPLETE</span>
+                    <button id="manageFlightRequirementsButton" class="text-button" type="button">
+                        Manage
+                    </button>
+                </div>
+            </div>
+
+            <div id="flightRequirementsList" class="requirements-list" role="list">
+
+                <article
+                    id="requirementMedical"
+                    class="requirement-item"
+                    role="listitem"
+                    data-requirement="medical"
+                >
+                    <button
+                        id="requirementMedicalToggle"
+                        class="requirement-checkbox"
+                        type="button"
+                        role="checkbox"
+                        aria-checked="false"
+                        aria-label="Mark medical requirement complete"
+                    >
+                        <span class="checkbox-mark" aria-hidden="true"></span>
+                    </button>
+
+                    <div class="requirement-content">
+                        <span class="requirement-category">DOCUMENTATION</span>
+                        <h3>Medical Certificate</h3>
+                        <p id="requirementMedicalDetails">
+                            Verify required medical documentation is current and available.
+                        </p>
+                    </div>
+
+                    <span id="requirementMedicalStatus" class="requirement-status">
+                        PENDING
+                    </span>
+                </article>
+
+
+                <article
+                    id="requirementLogbook"
+                    class="requirement-item"
+                    role="listitem"
+                    data-requirement="logbook"
+                >
+                    <button
+                        id="requirementLogbookToggle"
+                        class="requirement-checkbox"
+                        type="button"
+                        role="checkbox"
+                        aria-checked="false"
+                        aria-label="Mark logbook requirement complete"
+                    >
+                        <span class="checkbox-mark" aria-hidden="true"></span>
+                    </button>
+
+                    <div class="requirement-content">
+                        <span class="requirement-category">DOCUMENTATION</span>
+                        <h3>Logbook Review</h3>
+                        <p id="requirementLogbookDetails">
+                            Confirm training endorsements, aeronautical experience, and required entries.
+                        </p>
+                    </div>
+
+                    <span id="requirementLogbookStatus" class="requirement-status">
+                        PENDING
+                    </span>
+                </article>
+
+
+                <article
+                    id="requirementAircraft"
+                    class="requirement-item"
+                    role="listitem"
+                    data-requirement="aircraft"
+                >
+                    <button
+                        id="requirementAircraftToggle"
+                        class="requirement-checkbox"
+                        type="button"
+                        role="checkbox"
+                        aria-checked="false"
+                        aria-label="Mark aircraft requirement complete"
+                    >
+                        <span class="checkbox-mark" aria-hidden="true"></span>
+                    </button>
+
+                    <div class="requirement-content">
+                        <span class="requirement-category">AIRCRAFT</span>
+                        <h3>Aircraft Documents &amp; Equipment</h3>
+                        <p id="requirementAircraftDetails">
+                            Verify required aircraft documents, equipment, inspections, and operational status.
+                        </p>
+                    </div>
+
+                    <span id="requirementAircraftStatus" class="requirement-status">
+                        PENDING
+                    </span>
+                </article>
+
+
+                <article
+                    id="requirementEndorsements"
+                    class="requirement-item"
+                    role="listitem"
+                    data-requirement="endorsements"
+                >
+                    <button
+                        id="requirementEndorsementsToggle"
+                        class="requirement-checkbox"
+                        type="button"
+                        role="checkbox"
+                        aria-checked="false"
+                        aria-label="Mark endorsement requirement complete"
+                    >
+                        <span class="checkbox-mark" aria-hidden="true"></span>
+                    </button>
+
+                    <div class="requirement-content">
+                        <span class="requirement-category">INSTRUCTION</span>
+                        <h3>Required Endorsements</h3>
+                        <p id="requirementEndorsementsDetails">
+                            Confirm all applicable instructor endorsements are present and valid.
+                        </p>
+                    </div>
+
+                    <span id="requirementEndorsementsStatus" class="requirement-status">
+                        PENDING
+                    </span>
+                </article>
+
+
+                <article
+                    id="requirementPractical"
+                    class="requirement-item"
+                    role="listitem"
+                    data-requirement="practical"
+                >
+                    <button
+                        id="requirementPracticalToggle"
+                        class="requirement-checkbox"
+                        type="button"
+                        role="checkbox"
+                        aria-checked="false"
+                        aria-label="Mark practical test requirement complete"
+                    >
+                        <span class="checkbox-mark" aria-hidden="true"></span>
+                    </button>
+
+                    <div class="requirement-content">
+                        <span class="requirement-category">CHECKRIDE</span>
+                        <h3>Practical Test Preparation</h3>
+                        <p id="requirementPracticalDetails">
+                            Confirm scheduling, examiner information, required documents, and checkride plan.
+                        </p>
+                    </div>
+
+                    <span id="requirementPracticalStatus" class="requirement-status">
+                        PENDING
+                    </span>
+                </article>
+
+            </div>
+        </section>
+
+
+        <!-- =====================================================
+             READINESS MATRIX
+             ===================================================== -->
+        <section id="readinessMatrixSection" class="dashboard-section readiness-matrix-section" aria-labelledby="readinessMatrixTitle">
+
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">SYSTEM STATUS</span>
+                    <h2 id="readinessMatrixTitle">Readiness Matrix</h2>
+                </div>
+            </div>
+
+            <div class="readiness-matrix">
+
+                <article id="readinessKnowledge" class="readiness-item">
+                    <div class="readiness-item-header">
+                        <span class="readiness-label">KNOWLEDGE</span>
+                        <strong id="knowledgeReadinessValue">0%</strong>
+                    </div>
+
+                    <div class="progress-track">
+                        <div
+                            id="knowledgeReadinessBar"
+                            class="progress-fill"
+                            role="progressbar"
+                            aria-label="Knowledge readiness"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-valuenow="0"
+                        ></div>
+                    </div>
+
+                    <span id="knowledgeReadinessStatus" class="readiness-status">
+                        INCOMPLETE
+                    </span>
+                </article>
+
+
+                <article id="readinessRegulations" class="readiness-item">
+                    <div class="readiness-item-header">
+                        <span class="readiness-label">REGULATIONS</span>
+                        <strong id="regulationsReadinessValue">0%</strong>
+                    </div>
+
+                    <div class="progress-track">
+                        <div
+                            id="regulationsReadinessBar"
+                            class="progress-fill"
+                            role="progressbar"
+                            aria-label="Regulations readiness"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-valuenow="0"
+                        ></div>
+                    </div>
+
+                    <span id="regulationsReadinessStatus" class="readiness-status">
+                        INCOMPLETE
+                    </span>
+                </article>
+
+
+                <article id="readinessAircraftSystems" class="readiness-item">
+                    <div class="readiness-item-header">
+                        <span class="readiness-label">AIRCRAFT SYSTEMS</span>
+                        <strong id="aircraftSystemsReadinessValue">0%</strong>
+                    </div>
+
+                    <div class="progress-track">
+                        <div
+                            id="aircraftSystemsReadinessBar"
+                            class="progress-fill"
+                            role="progressbar"
+                            aria-label="Aircraft systems readiness"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-valuenow="0"
+                        ></div>
+                    </div>
+
+                    <span id="aircraftSystemsReadinessStatus" class="readiness-status">
+                        INCOMPLETE
+                    </span>
+                </article>
+
+
+                <article id="readinessPerformance" class="readiness-item">
+                    <div class="readiness-item-header">
+                        <span class="readiness-label">PERFORMANCE</span>
+                        <strong id="performanceReadinessValue">0%</strong>
+                    </div>
+
+                    <div class="progress-track">
+                        <div
+                            id="performanceReadinessBar"
+                            class="progress-fill"
+                            role="progressbar"
+                            aria-label="Performance readiness"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-valuenow="0"
+                        ></div>
+                    </div>
+
+                    <span id="performanceReadinessStatus" class="readiness-status">
+                        INCOMPLETE
+                    </span>
+                </article>
+
+
+                <article id="readinessOral" class="readiness-item">
+                    <div class="readiness-item-header">
+                        <span class="readiness-label">ORAL</span>
+                        <strong id="oralReadinessValue">0%</strong>
+                    </div>
+
+                    <div class="progress-track">
+                        <div
+                            id="oralReadinessBar"
+                            class="progress-fill"
+                            role="progressbar"
+                            aria-label="Oral examination readiness"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            aria-valuenow="0"
+                        ></div>
+                    </div>
+
+                    <span id="oralReadinessStatus" class="readiness-status">
+                        INCOMPLETE
+                    </span>
+                </article>
+
+            </div>
+        </section>
+
+
+        <!-- =====================================================
+             ACTIVITY / RECENT OPERATIONS
+             ===================================================== -->
+        <section id="activitySection" class="dashboard-section activity-section" aria-labelledby="activityTitle">
+
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">FLIGHT RECORDER</span>
+                    <h2 id="activityTitle">Recent Activity</h2>
+                </div>
+
+                <button id="clearActivityButton" class="text-button danger-text" type="button">
+                    Clear
+                </button>
+            </div>
+
+            <div id="activityList" class="activity-list" aria-live="polite">
+                <div id="emptyActivityState" class="empty-state">
+                    <span class="empty-state-icon" aria-hidden="true">—</span>
+                    <h3>No activity recorded</h3>
+                    <p>Your completed missions and study activity will appear here.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+
+    <!-- =========================================================
+         NOTIFICATION CONTAINER
+         ========================================================= -->
+    <aside
+        id="notificationContainer"
+        class="notification-container"
+        aria-label="Notifications"
+        aria-live="polite"
+        aria-atomic="false"
+    ></aside>
+
+
+    <!-- =========================================================
+         MODALS
+         ========================================================= -->
+
+    <!-- Settings Modal -->
+    <div
+        id="settingsModal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settingsModalTitle"
+        hidden
+    >
+        <div class="modal-backdrop" data-modal-close="settingsModal"></div>
+
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div>
+                    <span class="modal-kicker">SYSTEM CONFIGURATION</span>
+                    <h2 id="settingsModalTitle">Settings</h2>
+                </div>
+
+                <button
+                    id="closeSettingsModalButton"
+                    class="modal-close-button"
+                    type="button"
+                    aria-label="Close settings"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <section class="settings-group" aria-labelledby="checkrideSettingsHeading">
+                    <h3 id="checkrideSettingsHeading">Checkride</h3>
+
+                    <div class="form-field">
+                        <label for="checkrideDateInput">Checkride date</label>
+                        <input
+                            id="checkrideDateInput"
+                            name="checkrideDate"
+                            type="date"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="form-field">
+                        <label for="checkrideTimeInput">Checkride time</label>
+                        <input
+                            id="checkrideTimeInput"
+                            name="checkrideTime"
+                            type="time"
+                            autocomplete="off"
+                        >
+                    </div>
+                </section>
+
+                <section class="settings-group" aria-labelledby="aircraftSettingsHeading">
+                    <h3 id="aircraftSettingsHeading">Aircraft</h3>
+
+                    <div class="form-field">
+                        <label for="aircraftInput">Aircraft</label>
+                        <input
+                            id="aircraftInput"
+                            name="aircraft"
+                            type="text"
+                            placeholder="e.g. Piper Warrior"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="form-field">
+                        <label for="tailNumberInput">Tail number</label>
+                        <input
+                            id="tailNumberInput"
+                            name="tailNumber"
+                            type="text"
+                            placeholder="e.g. N12345"
+                            autocomplete="off"
+                        >
+                    </div>
+                </section>
+
+                <section class="settings-group" aria-labelledby="dataSettingsHeading">
+                    <h3 id="dataSettingsHeading">Local Data</h3>
+
+                    <div class="settings-actions">
+                        <button id="exportDataButton" class="secondary-button" type="button">
+                            Export Data
+                        </button>
+
+                        <button id="importDataButton" class="secondary-button" type="button">
+                            Import Data
+                        </button>
+
+                        <input
+                            id="importDataInput"
+                            type="file"
+                            accept=".json,application/json"
+                            hidden
+                        >
+                    </div>
+
+                    <button id="resetDataButton" class="danger-button" type="button">
+                        Reset All Data
+                    </button>
+                </section>
+
+            </div>
+
+            <div class="modal-footer">
+                <button id="cancelSettingsButton" class="secondary-button" type="button">
+                    Cancel
+                </button>
+
+                <button id="saveSettingsButton" class="primary-button" type="button">
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Mission Modal -->
+    <div
+        id="missionModal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="missionModalTitle"
+        hidden
+    >
+        <div class="modal-backdrop" data-modal-close="missionModal"></div>
+
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div>
+                    <span class="modal-kicker">MISSION PLANNER</span>
+                    <h2 id="missionModalTitle">Today's Mission</h2>
+                </div>
+
+                <button
+                    id="closeMissionModalButton"
+                    class="modal-close-button"
+                    type="button"
+                    aria-label="Close mission planner"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="form-field">
+                    <label for="missionObjectiveInput">Objective</label>
+                    <input
+                        id="missionObjectiveInput"
+                        name="missionObjective"
+                        type="text"
+                        placeholder="What must be accomplished today?"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="form-field">
+                    <label for="missionDescriptionInput">Mission briefing</label>
+                    <textarea
+                        id="missionDescriptionInput"
+                        name="missionDescription"
+                        rows="4"
+                        placeholder="Add the details, constraints, or priorities for today's mission."
+                    ></textarea>
+                </div>
+
+                <div class="form-field">
+                    <label for="missionPriorityInput">Priority</label>
+                    <select id="missionPriorityInput" name="missionPriority">
+                        <option value="primary">Primary Objective</option>
+                        <option value="high">High Priority</option>
+                        <option value="normal">Normal</option>
+                        <option value="low">Low Priority</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label for="missionTimeInput">Estimated time</label>
+                    <input
+                        id="missionTimeInput"
+                        name="missionTime"
+                        type="text"
+                        placeholder="e.g. 45 min"
+                        autocomplete="off"
+                    >
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button id="cancelMissionButton" class="secondary-button" type="button">
+                    Cancel
+                </button>
+
+                <button id="saveMissionButton" class="primary-button" type="button">
+                    Save Mission
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Flight Requirements Modal -->
+    <div
+        id="flightRequirementsModal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="flightRequirementsModalTitle"
+        hidden
+    >
+        <div class="modal-backdrop" data-modal-close="flightRequirementsModal"></div>
+
+        <div class="modal-dialog modal-dialog-large">
+            <div class="modal-header">
+                <div>
+                    <span class="modal-kicker">AIRCRAFT READINESS</span>
+                    <h2 id="flightRequirementsModalTitle">Manage Requirements</h2>
+                </div>
+
+                <button
+                    id="closeFlightRequirementsModalButton"
+                    class="modal-close-button"
+                    type="button"
+                    aria-label="Close flight requirements"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div id="flightRequirementsManager" class="modal-body requirements-manager">
+
+                <div class="manager-row">
+                    <div>
+                        <strong>Medical Certificate</strong>
+                        <span>Required pilot documentation.</span>
+                    </div>
+                    <button
+                        id="managerMedicalToggle"
+                        class="toggle-button"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        <span class="toggle-track">
+                            <span class="toggle-thumb"></span>
+                        </span>
+                        <span class="toggle-label">Incomplete</span>
+                    </button>
+                </div>
+
+                <div class="manager-row">
+                    <div>
+                        <strong>Logbook Review</strong>
+                        <span>Training records and aeronautical experience.</span>
+                    </div>
+                    <button
+                        id="managerLogbookToggle"
+                        class="toggle-button"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        <span class="toggle-track">
+                            <span class="toggle-thumb"></span>
+                        </span>
+                        <span class="toggle-label">Incomplete</span>
+                    </button>
+                </div>
+
+                <div class="manager-row">
+                    <div>
+                        <strong>Aircraft Documents &amp; Equipment</strong>
+                        <span>Aircraft legal and operational readiness.</span>
+                    </div>
+                    <button
+                        id="managerAircraftToggle"
+                        class="toggle-button"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        <span class="toggle-track">
+                            <span class="toggle-thumb"></span>
+                        </span>
+                        <span class="toggle-label">Incomplete</span>
+                    </button>
+                </div>
+
+                <div class="manager-row">
+                    <div>
+                        <strong>Required Endorsements</strong>
+                        <span>Applicable instructor endorsements.</span>
+                    </div>
+                    <button
+                        id="managerEndorsementsToggle"
+                        class="toggle-button"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        <span class="toggle-track">
+                            <span class="toggle-thumb"></span>
+                        </span>
+                        <span class="toggle-label">Incomplete</span>
+                    </button>
+                </div>
+
+                <div class="manager-row">
+                    <div>
+                        <strong>Practical Test Preparation</strong>
+                        <span>Examiner, scheduling, and checkride documentation.</span>
+                    </div>
+                    <button
+                        id="managerPracticalToggle"
+                        class="toggle-button"
+                        type="button"
+                        aria-pressed="false"
+                    >
+                        <span class="toggle-track">
+                            <span class="toggle-thumb"></span>
+                        </span>
+                        <span class="toggle-label">Incomplete</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button id="closeRequirementsButton" class="primary-button" type="button">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Generic Confirmation Modal -->
+    <div
+        id="confirmationModal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirmationModalTitle"
+        hidden
+    >
+        <div class="modal-backdrop" data-modal-close="confirmationModal"></div>
+
+        <div class="modal-dialog modal-dialog-small">
+            <div class="modal-header">
+                <div>
+                    <span id="confirmationModalKicker" class="modal-kicker">CONFIRMATION</span>
+                    <h2 id="confirmationModalTitle">Confirm Action</h2>
+                </div>
+
+                <button
+                    id="closeConfirmationModalButton"
+                    class="modal-close-button"
+                    type="button"
+                    aria-label="Close confirmation"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <p id="confirmationModalMessage">
+                    Are you sure you want to continue?
+                </p>
+            </div>
+
+            <div class="modal-footer">
+                <button id="cancelConfirmationButton" class="secondary-button" type="button">
+                    Cancel
+                </button>
+
+                <button id="confirmActionButton" class="danger-button" type="button">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Module Placeholder Modal -->
+    <div
+        id="moduleModal"
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="moduleModalTitle"
+        hidden
+    >
+        <div class="modal-backdrop" data-modal-close="moduleModal"></div>
+
+        <div class="modal-dialog modal-dialog-large">
+            <div class="modal-header">
+                <div>
+                    <span id="moduleModalKicker" class="modal-kicker">TRAINING MODULE</span>
+                    <h2 id="moduleModalTitle">Module</h2>
+                </div>
+
+                <button
+                    id="closeModuleModalButton"
+                    class="modal-close-button"
+                    type="button"
+                    aria-label="Close module"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div id="moduleModalContent" class="modal-body module-modal-content">
+                <!-- JavaScript injects module-specific content here. -->
+            </div>
+
+            <div class="modal-footer">
+                <button id="moduleModalPrimaryButton" class="primary-button" type="button">
+                    Continue
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         GLOBAL LOADING / APP STATE
+         ========================================================= -->
+    <div id="loadingOverlay" class="loading-overlay" hidden aria-hidden="true">
+        <div class="loading-indicator">
+            <span class="loading-ring" aria-hidden="true"></span>
+            <span id="loadingMessage">Loading mission systems...</span>
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         FOOTER
+         ========================================================= -->
+    <footer id="appFooter" class="app-footer">
+        <div class="footer-primary">
+            <span class="footer-brand">FINAL APPROACH</span>
+            <span class="footer-divider" aria-hidden="true">/</span>
+            <span>PRIVATE PILOT CHECKRIDE PREPARATION</span>
+        </div>
+
+        <div class="footer-secondary">
+            <span id="lastSavedDisplay">LAST SAVED: --</span>
+            <span class="footer-divider" aria-hidden="true">•</span>
+            <span id="appVersionDisplay">v1.0.0</span>
+        </div>
+    </footer>
+
+</div>
+
+
+<!-- =============================================================
+     APPLICATION SCRIPTS
+     ============================================================= -->
+<script src="app.js" defer></script>
+```
+
+</body>
+</html>
