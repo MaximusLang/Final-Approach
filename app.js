@@ -1,2166 +1,2825 @@
-/* =========================================================
-   FINAL APPROACH — app.js
-   FAA PPL Checkride Mission Control
-   ========================================================= */
+/* ============================================================
+   FINAL APPROACH
+   Private Pilot Checkride Mission Control
+   Vanilla JS / LocalStorage
+   ============================================================ */
 
-"use strict";
+(() => {
+    "use strict";
 
-/* =========================================================
-   CONFIGURATION
-   ========================================================= */
+    /* =========================================================
+       CONFIGURATION
+       ========================================================= */
 
-const CONFIG = {
-    checkrideDate: "2026-08-31T08:00:00",
-    storageKey: "finalApproachData",
-    version: 1,
+    const STORAGE_KEY = "finalApproachState";
+    const APP_VERSION = "1.0.0";
 
-    scoreTargets: {
-        written: 90,
-        oral: 85
-    },
-
-    prepwareCategories: [
-        "Aerodynamics",
-        "Aircraft Systems",
-        "Flight Instruments",
-        "Aircraft Performance",
-        "Regulations",
-        "Airspace and Airport Operations",
-        "Enroute Flight and Navigation",
-        "Weather",
-        "Weather Service",
-        "Human Factors"
-    ]
-};
-
-
-/* =========================================================
-   INITIAL STATE
-   ========================================================= */
-
-const DEFAULT_STATE = {
-    version: CONFIG.version,
-
-    tasks: {},
-
-    prepware: {
-        attempts: []
-    },
-
-    oral: {
-        sessions: []
-    },
-
-    flights: {
-        totalHours: 34.2,
-        soloFlights: 2,
-        simulatedInstrumentHours: 1,
-        nightHours: 0,
-        nightTakeoffs: 0,
-        nightLandings: 0,
-        soloXcComplete: false,
-        xcDistance: 0,
-        xcStops: 0
-    },
-
-    written: {
-        score: 77,
-        passed: true
-    },
-
-    settings: {
-        lastOpened: null
-    }
-};
-
-
-/* =========================================================
-   READING / STUDY MATERIAL
-   ========================================================= */
-
-const READING_TASKS = [
-    {
-        id: "phak-aero",
-        category: "Reading",
-        title: "PHAK — Aerodynamics / Principles of Flight",
-        subtitle: "Lift, drag, angle of attack, stalls, stability and controls",
-        hours: 2.0,
-        priority: "HIGH"
-    },
-
-    {
-        id: "phak-systems",
-        category: "Reading",
-        title: "PHAK — Aircraft Systems",
-        subtitle: "Engine, fuel, electrical, propeller, ignition and vacuum systems",
-        hours: 2.5,
-        priority: "HIGH"
-    },
-
-    {
-        id: "phak-instruments",
-        category: "Reading",
-        title: "PHAK — Flight Instruments",
-        subtitle: "Pitot-static, gyroscopic and magnetic instruments",
-        hours: 1.5,
-        priority: "HIGH"
-    },
-
-    {
-        id: "phak-performance",
-        category: "Reading",
-        title: "PHAK — Aircraft Performance",
-        subtitle: "Density altitude, performance charts, weight and balance",
-        hours: 2.0,
-        priority: "HIGH"
-    },
-
-    {
-        id: "phak-weather",
-        category: "Reading",
-        title: "PHAK — Weather Theory",
-        subtitle: "Atmosphere, pressure, fronts, stability, clouds and precipitation",
-        hours: 2.5,
-        priority: "HIGH"
-    },
-
-    {
-        id: "phak-weather-services",
-        category: "Reading",
-        title: "PHAK — Aviation Weather Services",
-        subtitle: "METARs, TAFs, PIREPs, weather briefings and products",
-        hours: 2.0,
-        priority: "HIGH"
-    },
-
-    {
-        id: "phak-airspace",
-        category: "Reading",
-        title: "PHAK — Airspace",
-        subtitle: "Class A–G, VFR weather minima, equipment and special-use airspace",
-        hours: 1.5,
-        priority: "HIGH"
-    },
-
-    {
-        id: "phak-navigation",
-        category: "Reading",
-        title: "PHAK — Navigation",
-        subtitle: "Charts, headings, courses, winds, pilotage and dead reckoning",
-        hours: 2.0,
-        priority: "HIGH"
-    },
-
-    {
-        id: "phak-human",
-        category: "Reading",
-        title: "PHAK — Aeromedical / Human Factors",
-        subtitle: "IMSAFE, hypoxia, hyperventilation, fatigue and spatial disorientation",
-        hours: 1.25,
-        priority: "MED"
-    },
-
-    {
-        id: "phak-ADM",
-        category: "Reading",
-        title: "PHAK — Aeronautical Decision Making",
-        subtitle: "Risk management, hazardous attitudes, SRM and ADM",
-        hours: 1.25,
-        priority: "HIGH"
-    },
-
-    {
-        id: "afh-preflight",
-        category: "Reading",
-        title: "AFH — Preflight Procedures",
-        subtitle: "Preflight inspection, cockpit organization and engine start",
-        hours: 1.0,
-        priority: "HIGH"
-    },
-
-    {
-        id: "afh-takeoff",
-        category: "Reading",
-        title: "AFH — Takeoffs and Climbs",
-        subtitle: "Normal, short-field and soft-field operations",
-        hours: 1.25,
-        priority: "HIGH"
-    },
-
-    {
-        id: "afh-landings",
-        category: "Reading",
-        title: "AFH — Landings",
-        subtitle: "Normal, short-field, soft-field and crosswind landings",
-        hours: 1.5,
-        priority: "HIGH"
-    },
-
-    {
-        id: "afh-performance",
-        category: "Reading",
-        title: "AFH — Performance Maneuvers",
-        subtitle: "Steep turns, slow flight and stalls",
-        hours: 1.25,
-        priority: "HIGH"
-    },
-
-    {
-        id: "afh-navigation",
-        category: "Reading",
-        title: "AFH — Navigation",
-        subtitle: "Pilotage, dead reckoning and cross-country procedures",
-        hours: 1.5,
-        priority: "HIGH"
-    },
-
-    {
-        id: "afh-emergency",
-        category: "Reading",
-        title: "AFH — Emergency Operations",
-        subtitle: "Engine failure, emergency descents, forced landings and abnormal situations",
-        hours: 1.5,
-        priority: "CRITICAL"
-    },
-
-    {
-        id: "afh-night",
-        category: "Reading",
-        title: "AFH — Night Operations",
-        subtitle: "Night vision, illusions, airport lighting and night emergencies",
-        hours: 1.0,
-        priority: "HIGH"
-    },
-
-    {
-        id: "far-61",
-        category: "FAR/AIM",
-        title: "14 CFR Part 61",
-        subtitle: "Eligibility, aeronautical experience, solo, cross-country and currency",
-        hours: 1.5,
-        priority: "CRITICAL"
-    },
-
-    {
-        id: "far-91",
-        category: "FAR/AIM",
-        title: "14 CFR Part 91",
-        subtitle: "Operating rules, VFR minima, equipment, weather and right-of-way",
-        hours: 2.0,
-        priority: "CRITICAL"
-    },
-
-    {
-        id: "far-91-equipment",
-        category: "FAR/AIM",
-        title: "14 CFR 91.205 / 91.207 / 91.215 / 91.225",
-        subtitle: "Required equipment, ELT, transponder and ADS-B",
-        hours: 0.75,
-        priority: "CRITICAL"
-    },
-
-    {
-        id: "far-medical",
-        category: "FAR/AIM",
-        title: "Medical / Alcohol / Drugs",
-        subtitle: "61.23, 91.17 and related medical requirements",
-        hours: 0.5,
-        priority: "HIGH"
-    },
-
-    {
-        id: "aim-vfr",
-        category: "FAR/AIM",
-        title: "AIM — VFR Operations",
-        subtitle: "ATC procedures, traffic patterns, communications and navigation",
-        hours: 1.25,
-        priority: "HIGH"
-    },
-
-    {
-        id: "acs-full",
-        category: "ACS",
-        title: "Private Pilot ACS — Complete Review",
-        subtitle: "Review every Area of Operation and applicable task",
-        hours: 2.0,
-        priority: "CRITICAL"
-    }
-];
-
-
-/* =========================================================
-   DAILY MISSION DATA
-   ========================================================= */
-
-const DAILY_MISSIONS = {
-    "2026-08-11": [
-        {
-            id: "aug11-1",
-            title: "Establish baseline",
-            meta: "Review weaknesses from rapid-fire session",
-            duration: "30 min"
+    const DEFAULT_STATE = {
+        settings: {
+            checkrideDate: "2026-08-31",
+            checkrideTime: "09:00",
+            aircraft: "Piper Warrior",
+            tailNumber: ""
         },
-        {
-            id: "aug11-2",
-            title: "Prepware — Regulations",
-            meta: "Focused quiz",
-            duration: "45 min"
+
+        mission: {
+            objective: "Complete today's checkride preparation mission.",
+            description: "Select a mission objective to begin.",
+            priority: "primary",
+            estimatedTime: "--",
+            date: null,
+            started: false
         },
-        {
-            id: "aug11-3",
-            title: "Mock Oral",
-            meta: "Regulations + aircraft systems",
-            duration: "30 min"
-        }
-    ],
 
-    "2026-08-12": [
-        {
-            id: "aug12-1",
-            title: "PHAK — Aircraft Systems",
-            meta: "Complete assigned reading",
-            duration: "2.5 hr"
+        requirements: {
+            medical: false,
+            logbook: false,
+            aircraft: false,
+            endorsements: false,
+            practical: false
         },
-        {
-            id: "aug12-2",
-            title: "Prepware — Aircraft Systems",
-            meta: "50+ questions",
-            duration: "45 min"
-        },
-        {
-            id: "aug12-3",
-            title: "Mock Oral",
-            meta: "Aircraft systems",
-            duration: "30 min"
-        }
-    ],
 
-    "2026-08-13": [
-        {
-            id: "aug13-1",
-            title: "PHAK — Flight Instruments",
-            meta: "Pitot-static + gyroscopic systems",
-            duration: "1.5 hr"
-        },
-        {
-            id: "aug13-2",
-            title: "AFH — Emergency Operations",
-            meta: "Engine failure + forced landing",
-            duration: "1.5 hr"
-        },
-        {
-            id: "aug13-3",
-            title: "Prepware — Flight Instruments",
-            meta: "Focused quiz",
-            duration: "45 min"
-        }
-    ],
+        modules: {
+            reading: {
+                completed: 0,
+                total: 0
+            },
 
-    "2026-08-14": [
-        {
-            id: "aug14-1",
-            title: "PHAK — Weather Theory",
-            meta: "Stability, fronts, clouds and precipitation",
-            duration: "2.5 hr"
-        },
-        {
-            id: "aug14-2",
-            title: "Prepware — Weather",
-            meta: "Focused quiz",
-            duration: "45 min"
-        },
-        {
-            id: "aug14-3",
-            title: "Mock Oral",
-            meta: "Weather briefing scenario",
-            duration: "30 min"
-        }
-    ],
-
-    "2026-08-15": [
-        {
-            id: "aug15-1",
-            title: "PHAK — Weather Services",
-            meta: "METAR, TAF, PIREP and briefing products",
-            duration: "2 hr"
-        },
-        {
-            id: "aug15-2",
-            title: "Prepware — Weather Service",
-            meta: "Focused quiz",
-            duration: "45 min"
-        },
-        {
-            id: "aug15-3",
-            title: "METAR / TAF decoding",
-            meta: "Active recall",
-            duration: "30 min"
-        }
-    ],
-
-    "2026-08-16": [
-        {
-            id: "aug16-1",
-            title: "PHAK — Airspace",
-            meta: "Classes + VFR weather minima",
-            duration: "1.5 hr"
-        },
-        {
-            id: "aug16-2",
-            title: "AIM — Airport Operations",
-            meta: "Traffic patterns + communications",
-            duration: "1 hr"
-        },
-        {
-            id: "aug16-3",
-            title: "Prepware — Airspace",
-            meta: "Focused quiz",
-            duration: "45 min"
-        }
-    ],
-
-    "2026-08-17": [
-        {
-            id: "aug17-1",
-            title: "PHAK — Navigation",
-            meta: "Course, heading, wind and pilotage",
-            duration: "2 hr"
-        },
-        {
-            id: "aug17-2",
-            title: "PHAK — Performance",
-            meta: "Density altitude + performance charts",
-            duration: "2 hr"
-        },
-        {
-            id: "aug17-3",
-            title: "Prepware — Performance",
-            meta: "Focused quiz",
-            duration: "45 min"
-        }
-    ],
-
-    "2026-08-18": [
-        {
-            id: "aug18-1",
-            title: "FULL PPL PRACTICE TEST",
-            meta: "Prepware — simulate testing conditions",
-            duration: "2 hr"
-        },
-        {
-            id: "aug18-2",
-            title: "Review every missed question",
-            meta: "Find the underlying concept",
-            duration: "1.5 hr"
-        },
-        {
-            id: "aug18-3",
-            title: "Mock Oral",
-            meta: "Weakest areas",
-            duration: "30 min"
-        }
-    ]
-};
-
-
-/* =========================================================
-   ACS AREAS
-   ========================================================= */
-
-const ACS_AREAS = [
-    {
-        id: "area-i",
-        title: "Preflight Preparation",
-        tasks: [
-            "Pilot Qualifications",
-            "Airworthiness Requirements",
-            "Weather Information",
-            "Cross-Country Flight Planning",
-            "National Airspace System",
-            "Performance and Limitations",
-            "Operation of Systems",
-            "Human Factors"
-        ]
-    },
-
-    {
-        id: "area-ii",
-        title: "Preflight Procedures",
-        tasks: [
-            "Preflight Inspection",
-            "Cockpit Management",
-            "Engine Starting",
-            "Taxiing",
-            "Before Takeoff Check"
-        ]
-    },
-
-    {
-        id: "area-iii",
-        title: "Airport and Seaplane Base Operations",
-        tasks: [
-            "Communications",
-            "Traffic Patterns",
-            "Airport Signs and Markings",
-            "Airport Lighting"
-        ]
-    },
-
-    {
-        id: "area-iv",
-        title: "Takeoffs, Landings, and Go-Arounds",
-        tasks: [
-            "Normal Takeoff",
-            "Normal Landing",
-            "Short-Field Takeoff",
-            "Short-Field Landing",
-            "Soft-Field Takeoff",
-            "Soft-Field Landing",
-            "Forward Slip",
-            "Go-Around"
-        ]
-    },
-
-    {
-        id: "area-v",
-        title: "Performance and Ground Reference Maneuvers",
-        tasks: [
-            "Steep Turns",
-            "Ground Reference Maneuvers",
-            "Navigation"
-        ]
-    },
-
-    {
-        id: "area-vi",
-        title: "Navigation",
-        tasks: [
-            "Pilotage and Dead Reckoning",
-            "Navigation Systems and Radar Services",
-            "Diversion",
-            "Lost Procedures"
-        ]
-    },
-
-    {
-        id: "area-vii",
-        title: "Slow Flight and Stalls",
-        tasks: [
-            "Straight-and-Level Slow Flight",
-            "Power-Off Stall",
-            "Power-On Stall"
-        ]
-    },
-
-    {
-        id: "area-viii",
-        title: "Basic Instrument Maneuvers",
-        tasks: [
-            "Straight-and-Level",
-            "Constant Airspeed Climbs",
-            "Constant Airspeed Descents",
-            "Turns to Headings",
-            "Recovery from Unusual Flight Attitudes"
-        ]
-    },
-
-    {
-        id: "area-ix",
-        title: "Emergency Operations",
-        tasks: [
-            "Emergency Descent",
-            "Emergency Approach and Landing",
-            "Systems and Equipment Malfunctions",
-            "Emergency Equipment and Survival Gear"
-        ]
-    },
-
-    {
-        id: "area-x",
-        title: "Night Operations",
-        tasks: [
-            "Night Preparation",
-            "Night Takeoff and Landing",
-            "Night Navigation"
-        ]
-    },
-
-    {
-        id: "area-xi",
-        title: "Postflight Procedures",
-        tasks: [
-            "After Landing",
-            "Parking and Securing"
-        ]
-    }
-];
-
-
-/* =========================================================
-   UTILITY FUNCTIONS
-   ========================================================= */
-
-function clone(obj) {
-    return JSON.parse(JSON.stringify(obj));
-}
-
-
-function getTodayKey() {
-    const date = new Date();
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-}
-
-
-function formatDate(date) {
-    return new Intl.DateTimeFormat("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric"
-    }).format(date);
-}
-
-
-function formatHours(hours) {
-    if (hours === 0) return "0h";
-
-    if (hours < 1) {
-        return `${Math.round(hours * 60)}m`;
-    }
-
-    const wholeHours = Math.floor(hours);
-    const minutes = Math.round((hours - wholeHours) * 60);
-
-    if (minutes === 0) {
-        return `${wholeHours}h`;
-    }
-
-    return `${wholeHours}h ${minutes}m`;
-}
-
-
-function clamp(value, min = 0, max = 100) {
-    return Math.min(Math.max(value, min), max);
-}
-
-
-function percentage(completed, total) {
-    if (!total) return 0;
-
-    return clamp(
-        Math.round((completed / total) * 100)
-    );
-}
-
-
-function escapeHTML(value) {
-    return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-}
-
-
-/* =========================================================
-   STORAGE
-   ========================================================= */
-
-let state = loadState();
-
-
-function loadState() {
-    try {
-        const stored = localStorage.getItem(CONFIG.storageKey);
-
-        if (!stored) {
-            return clone(DEFAULT_STATE);
-        }
-
-        const parsed = JSON.parse(stored);
-
-        return {
-            ...clone(DEFAULT_STATE),
-            ...parsed,
+            acs: {
+                completed: 0,
+                total: 0
+            },
 
             prepware: {
-                ...clone(DEFAULT_STATE.prepware),
-                ...(parsed.prepware || {})
+                answered: 0,
+                correct: 0
             },
 
             oral: {
-                ...clone(DEFAULT_STATE.oral),
-                ...(parsed.oral || {})
-            },
-
-            flights: {
-                ...clone(DEFAULT_STATE.flights),
-                ...(parsed.flights || {})
-            },
-
-            written: {
-                ...clone(DEFAULT_STATE.written),
-                ...(parsed.written || {})
-            },
-
-            settings: {
-                ...clone(DEFAULT_STATE.settings),
-                ...(parsed.settings || {})
+                sessions: 0,
+                readiness: 0
             }
-        };
-    } catch (error) {
-        console.error("Final Approach: failed to load state.", error);
+        },
 
-        return clone(DEFAULT_STATE);
-    }
-}
+        activity: [],
 
+        stats: {
+            studyMinutes: 0,
+            studyDays: [],
+            streak: 0
+        },
 
-function saveState() {
-    try {
-        state.settings.lastOpened = new Date().toISOString();
-
-        localStorage.setItem(
-            CONFIG.storageKey,
-            JSON.stringify(state)
-        );
-    } catch (error) {
-        console.error("Final Approach: failed to save state.", error);
-    }
-}
+        lastSaved: null
+    };
 
 
-/* =========================================================
-   TASK REGISTRATION
-   ========================================================= */
+    /* =========================================================
+       STATE
+       ========================================================= */
 
-function allTasks() {
-    return [
-        ...READING_TASKS,
+    let state = loadState();
 
-        ...ACS_AREAS.flatMap(area =>
-            area.tasks.map((task, index) => ({
-                id: `${area.id}-${index}`,
-                category: "ACS",
-                title: task,
-                subtitle: area.title,
-                hours: 0,
-                priority: "HIGH"
-            }))
-        )
-    ];
-}
+    let countdownTimer = null;
+    let saveTimer = null;
+    let pendingConfirmationAction = null;
 
 
-function isTaskComplete(id) {
-    return state.tasks[id] === true;
-}
+    /* =========================================================
+       DOM HELPERS
+       ========================================================= */
+
+    const $ = (id) => document.getElementById(id);
+
+    const $$ = (selector, parent = document) =>
+        Array.from(parent.querySelectorAll(selector));
+
+    const exists = (id) => Boolean($(id));
 
 
-function setTaskComplete(id, completed) {
-    state.tasks[id] = Boolean(completed);
+    /* =========================================================
+       INITIALIZATION
+       ========================================================= */
 
-    saveState();
-    renderAll();
-}
+    document.addEventListener("DOMContentLoaded", initialize);
 
+    function initialize() {
+        bindNavigation();
+        bindHeaderActions();
+        bindMissionControls();
+        bindSettingsControls();
+        bindRequirementControls();
+        bindModuleControls();
+        bindActivityControls();
+        bindModalControls();
+        bindKeyboardControls();
 
-/* =========================================================
-   PROGRESS CALCULATIONS
-   ========================================================= */
+        normalizeState();
+        renderEverything();
+        startCountdown();
 
-function getReadingProgress() {
-    const tasks = READING_TASKS;
-
-    const completed = tasks.filter(task =>
-        isTaskComplete(task.id)
-    ).length;
-
-    return percentage(completed, tasks.length);
-}
-
-
-function getACSProgress() {
-    const tasks = allTasks().filter(task =>
-        task.category === "ACS"
-    );
-
-    const completed = tasks.filter(task =>
-        isTaskComplete(task.id)
-    ).length;
-
-    return percentage(completed, tasks.length);
-}
-
-
-function getPrepwareProgress() {
-    const attempts = state.prepware.attempts;
-
-    if (!attempts.length) {
-        return 0;
+        document.body.classList.add("app-ready");
     }
 
-    const scores = attempts.map(attempt =>
-        Number(attempt.score) || 0
-    );
 
-    return clamp(
-        Math.round(
-            scores.reduce((sum, score) => sum + score, 0)
-            / scores.length
-        )
-    );
-}
+    /* =========================================================
+       STORAGE
+       ========================================================= */
 
+    function loadState() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
 
-function getOralProgress() {
-    const sessions = state.oral.sessions;
-
-    if (!sessions.length) {
-        return 0;
-    }
-
-    const scores = sessions
-        .map(session => Number(session.score))
-        .filter(score => Number.isFinite(score));
-
-    if (!scores.length) {
-        return 0;
-    }
-
-    return clamp(
-        Math.round(
-            scores.reduce((sum, score) => sum + score, 0)
-            / scores.length
-        )
-    );
-}
-
-
-function getFlightProgress() {
-    const requirements = [
-        state.flights.nightHours > 0,
-        state.flights.nightTakeoffs >= 3,
-        state.flights.nightLandings >= 3,
-        state.flights.soloXcComplete,
-        state.flights.simulatedInstrumentHours >= 3
-    ];
-
-    return percentage(
-        requirements.filter(Boolean).length,
-        requirements.length
-    );
-}
-
-
-function getOverallProgress() {
-    const values = [
-        getReadingProgress(),
-        getACSProgress(),
-        getPrepwareProgress(),
-        getOralProgress(),
-        getFlightProgress()
-    ];
-
-    return Math.round(
-        values.reduce((sum, value) => sum + value, 0)
-        / values.length
-    );
-}
-
-
-/* =========================================================
-   PROGRESS THEME
-   ========================================================= */
-
-function updateProgressTheme() {
-    const progress = getOverallProgress();
-
-    let theme = "critical";
-
-    if (progress >= 80) {
-        theme = "ready";
-    } else if (progress >= 60) {
-        theme = "strong";
-    } else if (progress >= 35) {
-        theme = "developing";
-    }
-
-    document.body.dataset.progressState = theme;
-
-    if (progress >= 100) {
-        document.body.dataset.complete = "true";
-    } else {
-        document.body.dataset.complete = "false";
-    }
-}
-
-
-/* =========================================================
-   COUNTDOWN
-   ========================================================= */
-
-function updateCountdown() {
-    const target = new Date(CONFIG.checkrideDate);
-    const now = new Date();
-
-    const difference = target - now;
-
-    const daysElement = document.querySelector(
-        "#countdownDays"
-    );
-
-    const dateElement = document.querySelector(
-        "#countdownDate"
-    );
-
-    if (!daysElement) return;
-
-    if (difference <= 0) {
-        daysElement.textContent = "NOW";
-    } else {
-        const days = Math.ceil(
-            difference / (1000 * 60 * 60 * 24)
-        );
-
-        daysElement.textContent = `T-${days}`;
-    }
-
-    if (dateElement) {
-        dateElement.textContent =
-            `Checkride · ${formatDate(target)}`;
-    }
-}
-
-
-/* =========================================================
-   GENERIC PROGRESS BAR
-   ========================================================= */
-
-function setProgressBar(id, value) {
-    const bar = document.querySelector(`#${id}`);
-
-    if (!bar) return;
-
-    bar.style.width = `${clamp(value)}%`;
-}
-
-
-/* =========================================================
-   MAIN PROGRESS UI
-   ========================================================= */
-
-function renderProgress() {
-    const overall = getOverallProgress();
-    const reading = getReadingProgress();
-    const acs = getACSProgress();
-    const prepware = getPrepwareProgress();
-    const oral = getOralProgress();
-    const flight = getFlightProgress();
-
-    setProgressBar("overallProgress", overall);
-    setProgressBar("readingProgress", reading);
-    setProgressBar("acsProgress", acs);
-    setProgressBar("prepwareProgress", prepware);
-    setProgressBar("oralProgress", oral);
-    setProgressBar("flightProgress", flight);
-
-    setText("overallProgressValue", `${overall}%`);
-    setText("readingProgressValue", `${reading}%`);
-    setText("acsProgressValue", `${acs}%`);
-    setText("prepwareProgressValue", `${prepware}%`);
-    setText("oralProgressValue", `${oral}%`);
-    setText("flightProgressValue", `${flight}%`);
-
-    setText(
-        "overallPercent",
-        `${overall}%`
-    );
-
-    setText(
-        "readingPercent",
-        `${reading}%`
-    );
-
-    setText(
-        "prepwarePercent",
-        prepware ? `${prepware}%` : "—"
-    );
-
-    setText(
-        "oralPercent",
-        oral ? `${oral}%` : "—"
-    );
-}
-
-
-/* =========================================================
-   READING RENDER
-   ========================================================= */
-
-function renderReadingTasks() {
-    const container = document.querySelector(
-        "#readingTaskList"
-    );
-
-    if (!container) return;
-
-    container.innerHTML = READING_TASKS.map(task => {
-        const completed = isTaskComplete(task.id);
-
-        return `
-            <label class="task-item ${completed ? "completed" : ""}">
-                <input
-                    type="checkbox"
-                    class="task-checkbox"
-                    data-task-id="${escapeHTML(task.id)}"
-                    ${completed ? "checked" : ""}
-                >
-
-                <div class="task-content">
-                    <div class="task-title">
-                        ${escapeHTML(task.title)}
-                    </div>
-
-                    <div class="task-subtitle">
-                        ${escapeHTML(task.subtitle)}
-                    </div>
-                </div>
-
-                <div class="task-meta">
-                    <span class="task-time">
-                        ${formatHours(task.hours)}
-                    </span>
-
-                    <span class="task-badge">
-                        ${escapeHTML(task.priority)}
-                    </span>
-                </div>
-            </label>
-        `;
-    }).join("");
-
-    container
-        .querySelectorAll("[data-task-id]")
-        .forEach(input => {
-            input.addEventListener("change", event => {
-                const id = event.currentTarget.dataset.taskId;
-
-                setTaskComplete(
-                    id,
-                    event.currentTarget.checked
-                );
-
-                showNotification(
-                    event.currentTarget.checked
-                        ? "Task completed"
-                        : "Task reopened",
-                    READING_TASKS.find(
-                        task => task.id === id
-                    )?.title || "Study task"
-                );
-            });
-        });
-}
-
-
-/* =========================================================
-   ACS RENDER
-   ========================================================= */
-
-function renderACS() {
-    const container = document.querySelector(
-        "#acsContainer"
-    );
-
-    if (!container) return;
-
-    container.innerHTML = ACS_AREAS.map(area => {
-        const completed = area.tasks.filter(
-            (_, index) =>
-                isTaskComplete(`${area.id}-${index}`)
-        ).length;
-
-        const progress = percentage(
-            completed,
-            area.tasks.length
-        );
-
-        return `
-            <div class="accordion" data-accordion="${area.id}">
-                <button
-                    class="accordion-trigger"
-                    type="button"
-                    data-accordion-trigger="${area.id}"
-                >
-                    <span class="accordion-title">
-                        <span class="accordion-arrow">›</span>
-                        <span>
-                            ${escapeHTML(area.title)}
-                        </span>
-                    </span>
-
-                    <span class="status-badge ${progress === 100 ? "success" : ""}">
-                        ${progress}%
-                    </span>
-                </button>
-
-                <div class="accordion-content">
-                    <div class="accordion-inner">
-                        <div class="task-list">
-                            ${area.tasks.map((task, index) => {
-                                const id = `${area.id}-${index}`;
-                                const done = isTaskComplete(id);
-
-                                return `
-                                    <label class="task-item ${done ? "completed" : ""}">
-                                        <input
-                                            type="checkbox"
-                                            class="task-checkbox"
-                                            data-task-id="${id}"
-                                            ${done ? "checked" : ""}
-                                        >
-
-                                        <div class="task-content">
-                                            <div class="task-title">
-                                                ${escapeHTML(task)}
-                                            </div>
-
-                                            <div class="task-subtitle">
-                                                ${escapeHTML(area.title)}
-                                            </div>
-                                        </div>
-                                    </label>
-                                `;
-                            }).join("")}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join("");
-
-    container
-        .querySelectorAll("[data-task-id]")
-        .forEach(input => {
-            input.addEventListener("change", event => {
-                setTaskComplete(
-                    event.currentTarget.dataset.taskId,
-                    event.currentTarget.checked
-                );
-            });
-        });
-
-    container
-        .querySelectorAll("[data-accordion-trigger]")
-        .forEach(button => {
-            button.addEventListener("click", () => {
-                const id =
-                    button.dataset.accordionTrigger;
-
-                const accordion =
-                    container.querySelector(
-                        `[data-accordion="${id}"]`
-                    );
-
-                accordion?.classList.toggle("open");
-            });
-        });
-}
-
-
-/* =========================================================
-   DAILY MISSION
-   ========================================================= */
-
-function renderDailyMission() {
-    const container = document.querySelector(
-        "#dailyMissionList"
-    );
-
-    if (!container) return;
-
-    const today = getTodayKey();
-
-    const missions =
-        DAILY_MISSIONS[today] ||
-        DAILY_MISSIONS["2026-08-18"];
-
-    container.innerHTML = missions.map(
-        (mission, index) => `
-            <div class="mission-task">
-                <div class="mission-number">
-                    ${index + 1}
-                </div>
-
-                <div class="mission-task-content">
-                    <div class="mission-task-title">
-                        ${escapeHTML(mission.title)}
-                    </div>
-
-                    <div class="mission-task-meta">
-                        <span class="mission-tag">
-                            ${escapeHTML(mission.meta)}
-                        </span>
-
-                        <span class="mission-tag">
-                            ${escapeHTML(mission.duration)}
-                        </span>
-                    </div>
-                </div>
-
-                <input
-                    type="checkbox"
-                    class="task-checkbox"
-                    data-mission-id="${escapeHTML(mission.id)}"
-                    ${state.tasks[mission.id] ? "checked" : ""}
-                >
-            </div>
-        `
-    ).join("");
-
-    container
-        .querySelectorAll("[data-mission-id]")
-        .forEach(input => {
-            input.addEventListener("change", event => {
-                state.tasks[
-                    event.currentTarget.dataset.missionId
-                ] = event.currentTarget.checked;
-
-                saveState();
-
-                renderAll();
-            });
-        });
-}
-
-
-/* =========================================================
-   PREPWARE
-   ========================================================= */
-
-function renderPrepware() {
-    const container = document.querySelector(
-        "#prepwareHistory"
-    );
-
-    if (!container) return;
-
-    const attempts = state.prepware.attempts
-        .slice()
-        .reverse();
-
-    if (!attempts.length) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div>
-                    <div class="empty-state-icon">◌</div>
-                    <div class="empty-state-title">
-                        No practice tests logged
-                    </div>
-                    <div class="empty-state-text">
-                        Complete a Prepware test and record the score here.
-                    </div>
-                </div>
-            </div>
-        `;
-
-        return;
-    }
-
-    container.innerHTML = attempts
-        .slice(0, 10)
-        .map(attempt => `
-            <div class="score-row">
-                <div class="score-name">
-                    ${escapeHTML(attempt.category)}
-                </div>
-
-                <div class="score-date">
-                    ${escapeHTML(attempt.date)}
-                </div>
-
-                <div class="score-value">
-                    ${Number(attempt.score)}%
-                </div>
-            </div>
-        `)
-        .join("");
-}
-
-
-function addPrepwareAttempt({
-    category,
-    score,
-    questions = null
-}) {
-    const normalizedScore = Number(score);
-
-    if (
-        !category ||
-        !Number.isFinite(normalizedScore) ||
-        normalizedScore < 0 ||
-        normalizedScore > 100
-    ) {
-        showNotification(
-            "Invalid practice result",
-            "Enter a score between 0 and 100."
-        );
-
-        return false;
-    }
-
-    state.prepware.attempts.push({
-        id: crypto.randomUUID
-            ? crypto.randomUUID()
-            : String(Date.now()),
-
-        category,
-        score: normalizedScore,
-        questions,
-        date: new Date().toLocaleDateString()
-    });
-
-    saveState();
-    renderAll();
-
-    showNotification(
-        "Practice test recorded",
-        `${category}: ${normalizedScore}%`
-    );
-
-    return true;
-}
-
-
-/* =========================================================
-   ORAL SESSIONS
-   ========================================================= */
-
-function renderOralSessions() {
-    const container = document.querySelector(
-        "#oralHistory"
-    );
-
-    if (!container) return;
-
-    const sessions = state.oral.sessions
-        .slice()
-        .reverse();
-
-    if (!sessions.length) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div>
-                    <div class="empty-state-icon">◌</div>
-
-                    <div class="empty-state-title">
-                        No mock orals logged
-                    </div>
-
-                    <div class="empty-state-text">
-                        Record your sessions with ChatGPT, Claude, your CFI, or another evaluator.
-                    </div>
-                </div>
-            </div>
-        `;
-
-        return;
-    }
-
-    container.innerHTML = sessions
-        .slice(0, 8)
-        .map(session => `
-            <div class="oral-session">
-                <div class="oral-session-header">
-                    <div class="oral-title">
-                        ${escapeHTML(session.title)}
-                    </div>
-
-                    <div class="oral-date">
-                        ${escapeHTML(session.date)}
-                    </div>
-                </div>
-
-                <div class="oral-topic-list">
-                    ${(session.topics || [])
-                        .map(topic => `
-                            <span class="oral-topic">
-                                ${escapeHTML(topic)}
-                            </span>
-                        `)
-                        .join("")}
-                </div>
-
-                ${
-                    Number.isFinite(Number(session.score))
-                        ? `
-                            <div style="margin-top: 10px;">
-                                <span class="status-badge ${
-                                    session.score >= 85
-                                        ? "success"
-                                        : "danger"
-                                }">
-                                    ${Number(session.score)}%
-                                </span>
-                            </div>
-                        `
-                        : ""
-                }
-            </div>
-        `)
-        .join("");
-}
-
-
-function addOralSession({
-    title = "Mock Oral",
-    topics = [],
-    score = null,
-    notes = ""
-}) {
-    state.oral.sessions.push({
-        id: crypto.randomUUID
-            ? crypto.randomUUID()
-            : String(Date.now()),
-
-        title,
-        topics,
-        score,
-        notes,
-
-        date: new Date().toLocaleDateString()
-    });
-
-    saveState();
-    renderAll();
-
-    showNotification(
-        "Mock oral recorded",
-        title
-    );
-}
-
-
-/* =========================================================
-   FLIGHT REQUIREMENTS
-   ========================================================= */
-
-function renderFlightRequirements() {
-    setText(
-        "flightHoursValue",
-        `${state.flights.totalHours.toFixed(1)} hr`
-    );
-
-    setText(
-        "soloFlightsValue",
-        String(state.flights.soloFlights)
-    );
-
-    setText(
-        "instrumentValue",
-        `${state.flights.simulatedInstrumentHours.toFixed(1)} hr`
-    );
-
-    setText(
-        "nightValue",
-        `${state.flights.nightHours.toFixed(1)} hr`
-    );
-
-    setText(
-        "nightTakeoffsValue",
-        String(state.flights.nightTakeoffs)
-    );
-
-    setText(
-        "nightLandingsValue",
-        String(state.flights.nightLandings)
-    );
-
-    setText(
-        "soloXCValue",
-        state.flights.soloXcComplete
-            ? "COMPLETE"
-            : "PENDING"
-    );
-
-    setText(
-        "xcDistanceValue",
-        `${state.flights.xcDistance} NM`
-    );
-
-    setText(
-        "xcStopsValue",
-        String(state.flights.xcStops)
-    );
-}
-
-
-/* =========================================================
-   WRITTEN EXAM
-   ========================================================= */
-
-function renderWritten() {
-    const score = state.written.score;
-
-    setText(
-        "writtenScore",
-        `${score}%`
-    );
-
-    const element = document.querySelector(
-        "#writtenStatus"
-    );
-
-    if (!element) return;
-
-    element.className =
-        "status-badge " +
-        (score >= 90
-            ? "success"
-            : score >= 80
-                ? "warning"
-                : "danger");
-
-    element.textContent =
-        score >= 90
-            ? "Strong"
-            : score >= 80
-                ? "Developing"
-                : "Needs work";
-}
-
-
-/* =========================================================
-   STATISTICS
-   ========================================================= */
-
-function renderStats() {
-    const readingHours = READING_TASKS.reduce(
-        (sum, task) => sum + task.hours,
-        0
-    );
-
-    const completedReadingHours =
-        READING_TASKS
-            .filter(task => isTaskComplete(task.id))
-            .reduce((sum, task) => sum + task.hours, 0);
-
-    const remainingReadingHours =
-        Math.max(
-            readingHours - completedReadingHours,
-            0
-        );
-
-    setText(
-        "readingHoursRemaining",
-        formatHours(remainingReadingHours)
-    );
-
-    setText(
-        "practiceTestCount",
-        String(state.prepware.attempts.length)
-    );
-
-    setText(
-        "oralCount",
-        String(state.oral.sessions.length)
-    );
-
-    setText(
-        "overallProgressStat",
-        `${getOverallProgress()}%`
-    );
-
-    setText(
-        "daysRemaining",
-        getDaysRemaining()
-    );
-}
-
-
-function getDaysRemaining() {
-    const target = new Date(CONFIG.checkrideDate);
-    const now = new Date();
-
-    const difference = target - now;
-
-    if (difference <= 0) {
-        return "0";
-    }
-
-    return String(
-        Math.ceil(
-            difference /
-            (1000 * 60 * 60 * 24)
-        )
-    );
-}
-
-
-/* =========================================================
-   WEAK AREAS
-   ========================================================= */
-
-function renderWeakAreas() {
-    const container = document.querySelector(
-        "#weakAreas"
-    );
-
-    if (!container) return;
-
-    const categoryAttempts = {};
-
-    state.prepware.attempts.forEach(attempt => {
-        if (!categoryAttempts[attempt.category]) {
-            categoryAttempts[attempt.category] = [];
-        }
-
-        categoryAttempts[attempt.category]
-            .push(Number(attempt.score));
-    });
-
-    const weakAreas = Object.entries(categoryAttempts)
-        .map(([category, scores]) => ({
-            category,
-
-            score: Math.round(
-                scores.reduce(
-                    (sum, score) => sum + score,
-                    0
-                ) / scores.length
-            )
-        }))
-        .filter(item => item.score < 85)
-        .sort((a, b) => a.score - b.score)
-        .slice(0, 5);
-
-    if (!weakAreas.length) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div>
-                    <div class="empty-state-title">
-                        No critical weak areas detected
-                    </div>
-
-                    <div class="empty-state-text">
-                        Keep logging Prepware results.
-                    </div>
-                </div>
-            </div>
-        `;
-
-        return;
-    }
-
-    container.innerHTML = weakAreas.map(area => `
-        <div class="weak-area">
-            <div class="weak-name">
-                ${escapeHTML(area.category)}
-            </div>
-
-            <div class="weak-score">
-                ${area.score}%
-            </div>
-        </div>
-    `).join("");
-}
-
-
-/* =========================================================
-   TEXT HELPERS
-   ========================================================= */
-
-function setText(id, value) {
-    const element = document.getElementById(id);
-
-    if (element) {
-        element.textContent = value;
-    }
-}
-
-
-/* =========================================================
-   NOTIFICATIONS
-   ========================================================= */
-
-function showNotification(
-    title,
-    message,
-    duration = 3000
-) {
-    const container = document.querySelector(
-        "#notificationContainer"
-    );
-
-    if (!container) return;
-
-    const notification =
-        document.createElement("div");
-
-    notification.className = "notification";
-
-    notification.innerHTML = `
-        <div class="notification-icon">
-            ●
-        </div>
-
-        <div class="notification-content">
-            <div class="notification-title">
-                ${escapeHTML(title)}
-            </div>
-
-            <div class="notification-message">
-                ${escapeHTML(message)}
-            </div>
-        </div>
-    `;
-
-    container.appendChild(notification);
-
-    window.setTimeout(() => {
-        notification.classList.add("removing");
-
-        window.setTimeout(() => {
-            notification.remove();
-        }, 250);
-    }, duration);
-}
-
-
-/* =========================================================
-   MODALS
-   ========================================================= */
-
-function openModal(id) {
-    const modal = document.querySelector(`#${id}`);
-
-    if (!modal) return;
-
-    modal.classList.add("open");
-
-    document.body.style.overflow = "hidden";
-}
-
-
-function closeModal(id) {
-    const modal = document.querySelector(`#${id}`);
-
-    if (!modal) return;
-
-    modal.classList.remove("open");
-
-    document.body.style.overflow = "";
-}
-
-
-function setupModals() {
-    document
-        .querySelectorAll("[data-modal-open]")
-        .forEach(button => {
-            button.addEventListener("click", () => {
-                openModal(
-                    button.dataset.modalOpen
-                );
-            });
-        });
-
-    document
-        .querySelectorAll("[data-modal-close]")
-        .forEach(button => {
-            button.addEventListener("click", () => {
-                closeModal(
-                    button.dataset.modalClose
-                );
-            });
-        });
-
-    document
-        .querySelectorAll(".modal-backdrop")
-        .forEach(backdrop => {
-            backdrop.addEventListener("click", event => {
-                if (
-                    event.target === backdrop
-                ) {
-                    backdrop.classList.remove("open");
-
-                    document.body.style.overflow = "";
-                }
-            });
-        });
-
-    document.addEventListener("keydown", event => {
-        if (event.key !== "Escape") return;
-
-        document
-            .querySelectorAll(".modal-backdrop.open")
-            .forEach(modal => {
-                modal.classList.remove("open");
-            });
-
-        document.body.style.overflow = "";
-    });
-}
-
-
-/* =========================================================
-   DATA ENTRY FORMS
-   ========================================================= */
-
-function setupPrepwareForm() {
-    const form = document.querySelector(
-        "#prepwareForm"
-    );
-
-    if (!form) return;
-
-    form.addEventListener("submit", event => {
-        event.preventDefault();
-
-        const formData =
-            new FormData(form);
-
-        const category =
-            formData.get("category");
-
-        const score =
-            formData.get("score");
-
-        const questions =
-            formData.get("questions");
-
-        if (
-            addPrepwareAttempt({
-                category,
-                score,
-                questions
-            })
-        ) {
-            form.reset();
-
-            const modal =
-                form.closest(".modal-backdrop");
-
-            modal?.classList.remove("open");
-
-            document.body.style.overflow = "";
-        }
-    });
-}
-
-
-function setupOralForm() {
-    const form = document.querySelector(
-        "#oralForm"
-    );
-
-    if (!form) return;
-
-    form.addEventListener("submit", event => {
-        event.preventDefault();
-
-        const formData =
-            new FormData(form);
-
-        const topicsString =
-            formData.get("topics") || "";
-
-        const topics =
-            topicsString
-                .split(",")
-                .map(topic => topic.trim())
-                .filter(Boolean);
-
-        addOralSession({
-            title:
-                formData.get("title") ||
-                "Mock Oral",
-
-            topics,
-
-            score:
-                formData.get("score")
-                    ? Number(formData.get("score"))
-                    : null,
-
-            notes:
-                formData.get("notes") || ""
-        });
-
-        form.reset();
-
-        const modal =
-            form.closest(".modal-backdrop");
-
-        modal?.classList.remove("open");
-
-        document.body.style.overflow = "";
-    });
-}
-
-
-/* =========================================================
-   RESET
-   ========================================================= */
-
-function resetAllData() {
-    const confirmed = window.confirm(
-        "Reset ALL Final Approach progress? This cannot be undone."
-    );
-
-    if (!confirmed) return;
-
-    state = clone(DEFAULT_STATE);
-
-    saveState();
-    renderAll();
-
-    showNotification(
-        "Progress reset",
-        "Final Approach has been returned to its initial state."
-    );
-}
-
-
-/* =========================================================
-   RESET BUTTON
-   ========================================================= */
-
-function setupReset() {
-    const button = document.querySelector(
-        "#resetProgress"
-    );
-
-    if (!button) return;
-
-    button.addEventListener(
-        "click",
-        resetAllData
-    );
-}
-
-
-/* =========================================================
-   EXPORT / IMPORT
-   ========================================================= */
-
-function exportData() {
-    const data = JSON.stringify(
-        state,
-        null,
-        2
-    );
-
-    const blob = new Blob(
-        [data],
-        { type: "application/json" }
-    );
-
-    const url =
-        URL.createObjectURL(blob);
-
-    const anchor =
-        document.createElement("a");
-
-    anchor.href = url;
-
-    anchor.download =
-        "final-approach-backup.json";
-
-    anchor.click();
-
-    URL.revokeObjectURL(url);
-
-    showNotification(
-        "Backup created",
-        "Your Final Approach progress was exported."
-    );
-}
-
-
-function setupExport() {
-    const button = document.querySelector(
-        "#exportData"
-    );
-
-    if (!button) return;
-
-    button.addEventListener(
-        "click",
-        exportData
-    );
-}
-
-
-/* =========================================================
-   KEYBOARD SHORTCUTS
-   ========================================================= */
-
-function setupKeyboardShortcuts() {
-    document.addEventListener(
-        "keydown",
-        event => {
-            if (
-                event.target.matches(
-                    "input, textarea, select"
-                )
-            ) {
-                return;
+            if (!raw) {
+                return structuredClone(DEFAULT_STATE);
             }
 
+            const parsed = JSON.parse(raw);
+
+            return deepMerge(
+                structuredClone(DEFAULT_STATE),
+                parsed
+            );
+        } catch (error) {
+            console.error("Final Approach: failed to load state.", error);
+            return structuredClone(DEFAULT_STATE);
+        }
+    }
+
+
+    function saveState() {
+        try {
+            state.lastSaved = new Date().toISOString();
+
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify(state)
+            );
+
+            renderLastSaved();
+        } catch (error) {
+            console.error("Final Approach: failed to save state.", error);
+            notify(
+                "Unable to save local data.",
+                "error"
+            );
+        }
+    }
+
+
+    function scheduleSave() {
+        clearTimeout(saveTimer);
+
+        saveTimer = setTimeout(() => {
+            saveState();
+        }, 150);
+    }
+
+
+    function deepMerge(target, source) {
+        if (!source || typeof source !== "object") {
+            return target;
+        }
+
+        Object.keys(source).forEach((key) => {
             if (
-                event.key.toLowerCase() === "r"
+                source[key] &&
+                typeof source[key] === "object" &&
+                !Array.isArray(source[key]) &&
+                target[key] &&
+                typeof target[key] === "object"
             ) {
+                deepMerge(target[key], source[key]);
+            } else {
+                target[key] = source[key];
+            }
+        });
+
+        return target;
+    }
+
+
+    function normalizeState() {
+        if (!state.mission.date) {
+            state.mission.date = getDateKey();
+        }
+
+        if (!Array.isArray(state.activity)) {
+            state.activity = [];
+        }
+
+        if (!Array.isArray(state.stats.studyDays)) {
+            state.stats.studyDays = [];
+        }
+
+        state.modules.reading.completed = Math.max(
+            0,
+            Number(state.modules.reading.completed) || 0
+        );
+
+        state.modules.reading.total = Math.max(
+            0,
+            Number(state.modules.reading.total) || 0
+        );
+
+        state.modules.acs.completed = Math.max(
+            0,
+            Number(state.modules.acs.completed) || 0
+        );
+
+        state.modules.acs.total = Math.max(
+            0,
+            Number(state.modules.acs.total) || 0
+        );
+
+        state.modules.prepware.answered = Math.max(
+            0,
+            Number(state.modules.prepware.answered) || 0
+        );
+
+        state.modules.prepware.correct = Math.max(
+            0,
+            Number(state.modules.prepware.correct) || 0
+        );
+
+        state.modules.oral.sessions = Math.max(
+            0,
+            Number(state.modules.oral.sessions) || 0
+        );
+
+        state.modules.oral.readiness = clamp(
+            Number(state.modules.oral.readiness) || 0,
+            0,
+            100
+        );
+
+        state.stats.studyMinutes = Math.max(
+            0,
+            Number(state.stats.studyMinutes) || 0
+        );
+
+        state.stats.streak = calculateStudyStreak();
+    }
+
+
+    /* =========================================================
+       GENERAL UTILITIES
+       ========================================================= */
+
+    function clamp(value, min, max) {
+        return Math.min(
+            Math.max(value, min),
+            max
+        );
+    }
+
+
+    function percent(completed, total) {
+        if (!total || total <= 0) {
+            return 0;
+        }
+
+        return Math.round(
+            clamp(completed / total, 0, 1) * 100
+        );
+    }
+
+
+    function formatDate(dateString) {
+        if (!dateString) {
+            return "--";
+        }
+
+        const date = new Date(`${dateString}T12:00:00`);
+
+        if (Number.isNaN(date.getTime())) {
+            return "--";
+        }
+
+        return new Intl.DateTimeFormat("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric"
+        })
+            .format(date)
+            .toUpperCase();
+    }
+
+
+    function formatShortDate(dateString) {
+        if (!dateString) {
+            return "--";
+        }
+
+        const date = new Date(`${dateString}T12:00:00`);
+
+        if (Number.isNaN(date.getTime())) {
+            return "--";
+        }
+
+        return new Intl.DateTimeFormat("en-US", {
+            month: "short",
+            day: "numeric"
+        })
+            .format(date)
+            .toUpperCase();
+    }
+
+
+    function getDateKey(date = new Date()) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+
+        return `${year}-${month}-${day}`;
+    }
+
+
+    function escapeHTML(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+
+    /* =========================================================
+       RENDER EVERYTHING
+       ========================================================= */
+
+    function renderEverything() {
+        renderSettings();
+        renderMission();
+        renderCountdown();
+        renderOverallProgress();
+        renderStatistics();
+        renderModules();
+        renderRequirements();
+        renderReadinessMatrix();
+        renderActivity();
+        renderLastSaved();
+        renderFooter();
+    }
+
+
+    /* =========================================================
+       HEADER / NAVIGATION
+       ========================================================= */
+
+    function bindNavigation() {
+        $$(".nav-link").forEach((button) => {
+            button.addEventListener("click", () => {
+                const section = button.dataset.section;
+
+                setActiveNavigation(button);
+                navigateToSection(section);
+            });
+        });
+
+        if (exists("brandButton")) {
+            $("brandButton").addEventListener("click", () => {
+                setActiveNavigation($("navDashboard"));
                 window.scrollTo({
                     top: 0,
                     behavior: "smooth"
                 });
+            });
+        }
+    }
+
+
+    function setActiveNavigation(activeButton) {
+        $$(".nav-link").forEach((button) => {
+            button.classList.toggle(
+                "active",
+                button === activeButton
+            );
+        });
+    }
+
+
+    function navigateToSection(section) {
+        const sectionMap = {
+            dashboard: "missionSection",
+            reading: "readingModule",
+            acs: "acsModule",
+            prepware: "prepwareModule",
+            oral: "oralModule"
+        };
+
+        const target = $(sectionMap[section]);
+
+        if (!target) {
+            return;
+        }
+
+        target.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
+    }
+
+
+    function bindHeaderActions() {
+        if (exists("settingsButton")) {
+            $("settingsButton").addEventListener(
+                "click",
+                () => openModal("settingsModal")
+            );
+        }
+
+        if (exists("notificationButton")) {
+            $("notificationButton").addEventListener(
+                "click",
+                () => toggleNotificationPanel()
+            );
+        }
+    }
+
+
+    /* =========================================================
+       COUNTDOWN
+       ========================================================= */
+
+    function startCountdown() {
+        clearInterval(countdownTimer);
+
+        renderCountdown();
+
+        countdownTimer = setInterval(
+            renderCountdown,
+            1000
+        );
+    }
+
+
+    function getCheckrideDateTime() {
+        const date = state.settings.checkrideDate;
+
+        if (!date) {
+            return null;
+        }
+
+        const time = state.settings.checkrideTime || "09:00";
+
+        const target = new Date(
+            `${date}T${time}:00`
+        );
+
+        if (Number.isNaN(target.getTime())) {
+            return null;
+        }
+
+        return target;
+    }
+
+
+    function renderCountdown() {
+        const target = getCheckrideDateTime();
+
+        if (!target) {
+            setText("countdownDays", "--");
+            setText("countdownHours", "--");
+            setText("countdownMinutes", "--");
+            setText("countdownSeconds", "--");
+            setText(
+                "countdownStatus",
+                "CHECKRIDE DATE NOT SET"
+            );
+            return;
+        }
+
+        const now = new Date();
+        const difference = target.getTime() - now.getTime();
+
+        if (difference <= 0) {
+            setText("countdownDays", "00");
+            setText("countdownHours", "00");
+            setText("countdownMinutes", "00");
+            setText("countdownSeconds", "00");
+
+            setText(
+                "countdownStatus",
+                difference > -86400000
+                    ? "CHECKRIDE DAY"
+                    : "CHECKRIDE DATE PASSED"
+            );
+
+            if (exists("countdownPanel")) {
+                $("countdownPanel").classList.add("countdown-critical");
+            }
+
+            return;
+        }
+
+        if (exists("countdownPanel")) {
+            $("countdownPanel").classList.remove(
+                "countdown-critical"
+            );
+        }
+
+        const totalSeconds = Math.floor(
+            difference / 1000
+        );
+
+        const days = Math.floor(
+            totalSeconds / 86400
+        );
+
+        const hours = Math.floor(
+            (totalSeconds % 86400) / 3600
+        );
+
+        const minutes = Math.floor(
+            (totalSeconds % 3600) / 60
+        );
+
+        const seconds = totalSeconds % 60;
+
+        setText(
+            "countdownDays",
+            String(days).padStart(2, "0")
+        );
+
+        setText(
+            "countdownHours",
+            String(hours).padStart(2, "0")
+        );
+
+        setText(
+            "countdownMinutes",
+            String(minutes).padStart(2, "0")
+        );
+
+        setText(
+            "countdownSeconds",
+            String(seconds).padStart(2, "0")
+        );
+
+        setText(
+            "countdownStatus",
+            "UNTIL CHECKRIDE"
+        );
+    }
+
+
+    /* =========================================================
+       MISSION
+       ========================================================= */
+
+    function bindMissionControls() {
+        if (exists("editMissionButton")) {
+            $("editMissionButton").addEventListener(
+                "click",
+                openMissionModal
+            );
+        }
+
+        if (exists("startMissionButton")) {
+            $("startMissionButton").addEventListener(
+                "click",
+                startMission
+            );
+        }
+
+        if (exists("saveMissionButton")) {
+            $("saveMissionButton").addEventListener(
+                "click",
+                saveMission
+            );
+        }
+
+        if (exists("cancelMissionButton")) {
+            $("cancelMissionButton").addEventListener(
+                "click",
+                () => closeModal("missionModal")
+            );
+        }
+
+        if (exists("closeMissionModalButton")) {
+            $("closeMissionModalButton").addEventListener(
+                "click",
+                () => closeModal("missionModal")
+            );
+        }
+    }
+
+
+    function openMissionModal() {
+        setInputValue(
+            "missionObjectiveInput",
+            state.mission.objective
+        );
+
+        setInputValue(
+            "missionDescriptionInput",
+            state.mission.description
+        );
+
+        setInputValue(
+            "missionPriorityInput",
+            state.mission.priority
+        );
+
+        setInputValue(
+            "missionTimeInput",
+            state.mission.estimatedTime
+        );
+
+        openModal("missionModal");
+    }
+
+
+    function saveMission() {
+        const objective = getInputValue(
+            "missionObjectiveInput"
+        ).trim();
+
+        const description = getInputValue(
+            "missionDescriptionInput"
+        ).trim();
+
+        const priority = getInputValue(
+            "missionPriorityInput"
+        );
+
+        const estimatedTime = getInputValue(
+            "missionTimeInput"
+        ).trim();
+
+        state.mission.objective =
+            objective ||
+            "Complete today's checkride preparation mission.";
+
+        state.mission.description =
+            description ||
+            "Select a mission objective to begin.";
+
+        state.mission.priority =
+            priority || "primary";
+
+        state.mission.estimatedTime =
+            estimatedTime || "--";
+
+        state.mission.date = getDateKey();
+
+        scheduleSave();
+        renderMission();
+
+        closeModal("missionModal");
+
+        notify(
+            "Mission brief updated.",
+            "success"
+        );
+    }
+
+
+    function startMission() {
+        state.mission.started = true;
+        state.mission.date = getDateKey();
+
+        recordActivity(
+            "Mission started",
+            state.mission.objective
+        );
+
+        markStudyDay();
+
+        scheduleSave();
+        renderMission();
+        renderStatistics();
+        renderActivity();
+
+        notify(
+            "Mission clock started.",
+            "success"
+        );
+    }
+
+
+    function renderMission() {
+        setText(
+            "missionStatusLabel",
+            state.mission.started
+                ? "MISSION IN PROGRESS"
+                : "MISSION ACTIVE"
+        );
+
+        setText(
+            "checkrideDateDisplay",
+            formatDate(
+                state.settings.checkrideDate
+            )
+        );
+
+        setText(
+            "aircraftDisplay",
+            state.settings.aircraft ||
+            "AIRCRAFT NOT SET"
+        );
+
+        const checkrideDate =
+            getCheckrideDateTime();
+
+        if (checkrideDate) {
+            const missionDay = Math.max(
+                1,
+                Math.floor(
+                    (
+                        new Date().getTime() -
+                        new Date(
+                            state.settings.checkrideDate +
+                            "T00:00:00"
+                        ).getTime()
+                    ) /
+                    86400000
+                ) + 1
+            );
+
+            setText(
+                "missionDayDisplay",
+                `DAY ${missionDay}`
+            );
+        }
+
+        setText(
+            "missionDateLabel",
+            formatShortDate(
+                state.mission.date
+            )
+        );
+
+        setText(
+            "todaysMissionObjective",
+            state.mission.objective
+        );
+
+        setText(
+            "todaysMissionDescription",
+            state.mission.description
+        );
+
+        setText(
+            "todaysMissionTime",
+            state.mission.estimatedTime || "--"
+        );
+
+        const priorityLabels = {
+            primary: "PRIMARY OBJECTIVE",
+            high: "HIGH PRIORITY",
+            normal: "NORMAL PRIORITY",
+            low: "LOW PRIORITY"
+        };
+
+        setText(
+            "missionPriorityLabel",
+            priorityLabels[state.mission.priority] ||
+            "PRIMARY OBJECTIVE"
+        );
+
+        if (exists("missionPriorityIndicator")) {
+            $("missionPriorityIndicator").dataset.priority =
+                state.mission.priority;
+        }
+
+        const progress = calculateMissionProgress();
+
+        setText(
+            "todaysMissionProgressText",
+            `${progress}%`
+        );
+
+        setProgress(
+            "todaysMissionProgressBar",
+            progress
+        );
+
+        setText(
+            "todaysMissionTaskCount",
+            `${Math.round(progress / 100 * getMissionTaskTotal())} / ${getMissionTaskTotal()}`
+        );
+    }
+
+
+    function getMissionTaskTotal() {
+        return 4;
+    }
+
+
+    function calculateMissionProgress() {
+        const readiness = calculateReadiness();
+
+        if (!state.mission.started) {
+            return 0;
+        }
+
+        return readiness;
+    }
+
+
+    /* =========================================================
+       SETTINGS
+       ========================================================= */
+
+    function bindSettingsControls() {
+        if (exists("saveSettingsButton")) {
+            $("saveSettingsButton").addEventListener(
+                "click",
+                saveSettings
+            );
+        }
+
+        if (exists("cancelSettingsButton")) {
+            $("cancelSettingsButton").addEventListener(
+                "click",
+                () => closeModal("settingsModal")
+            );
+        }
+
+        if (exists("closeSettingsModalButton")) {
+            $("closeSettingsModalButton").addEventListener(
+                "click",
+                () => closeModal("settingsModal")
+            );
+        }
+
+        if (exists("exportDataButton")) {
+            $("exportDataButton").addEventListener(
+                "click",
+                exportData
+            );
+        }
+
+        if (exists("importDataButton")) {
+            $("importDataButton").addEventListener(
+                "click",
+                () => {
+                    if (exists("importDataInput")) {
+                        $("importDataInput").click();
+                    }
+                }
+            );
+        }
+
+        if (exists("importDataInput")) {
+            $("importDataInput").addEventListener(
+                "change",
+                importData
+            );
+        }
+
+        if (exists("resetDataButton")) {
+            $("resetDataButton").addEventListener(
+                "click",
+                () => {
+                    openConfirmation(
+                        "Reset all local data?",
+                        "This will erase your Final Approach progress, settings, activity, and statistics.",
+                        resetData
+                    );
+                }
+            );
+        }
+    }
+
+
+    function renderSettings() {
+        setInputValue(
+            "checkrideDateInput",
+            state.settings.checkrideDate
+        );
+
+        setInputValue(
+            "checkrideTimeInput",
+            state.settings.checkrideTime
+        );
+
+        setInputValue(
+            "aircraftInput",
+            state.settings.aircraft
+        );
+
+        setInputValue(
+            "tailNumberInput",
+            state.settings.tailNumber
+        );
+    }
+
+
+    function saveSettings() {
+        const date = getInputValue(
+            "checkrideDateInput"
+        );
+
+        const time = getInputValue(
+            "checkrideTimeInput"
+        );
+
+        const aircraft = getInputValue(
+            "aircraftInput"
+        ).trim();
+
+        const tailNumber = getInputValue(
+            "tailNumberInput"
+        ).trim();
+
+        if (!date) {
+            notify(
+                "Checkride date is required.",
+                "error"
+            );
+            return;
+        }
+
+        state.settings.checkrideDate = date;
+        state.settings.checkrideTime =
+            time || "09:00";
+
+        state.settings.aircraft =
+            aircraft || "Piper Warrior";
+
+        state.settings.tailNumber =
+            tailNumber;
+
+        scheduleSave();
+
+        renderEverything();
+
+        closeModal("settingsModal");
+
+        notify(
+            "Mission configuration saved.",
+            "success"
+        );
+    }
+
+
+    /* =========================================================
+       OVERALL PROGRESS
+       ========================================================= */
+
+    function calculateOverallProgress() {
+        const components = [
+            getReadingProgress(),
+            getAcsProgress(),
+            getPrepwareProgress(),
+            getOralProgress(),
+            getRequirementProgress()
+        ];
+
+        return Math.round(
+            components.reduce(
+                (sum, value) => sum + value,
+                0
+            ) / components.length
+        );
+    }
+
+
+    function calculateReadiness() {
+        const components = [
+            getReadingProgress(),
+            getAcsProgress(),
+            getPrepwareProgress(),
+            getOralProgress()
+        ];
+
+        return Math.round(
+            components.reduce(
+                (sum, value) => sum + value,
+                0
+            ) / components.length
+        );
+    }
+
+
+    function renderOverallProgress() {
+        const progress =
+            calculateOverallProgress();
+
+        const totalItems =
+            getTotalTrackedItems();
+
+        const completedItems =
+            getCompletedTrackedItems();
+
+        const remainingItems =
+            Math.max(
+                0,
+                totalItems - completedItems
+            );
+
+        setText(
+            "overallProgressPercentage",
+            `${progress}%`
+        );
+
+        setProgress(
+            "overallProgressBar",
+            progress
+        );
+
+        setText(
+            "completedItemsCount",
+            completedItems
+        );
+
+        setText(
+            "remainingItemsCount",
+            remainingItems
+        );
+
+        setText(
+            "totalItemsCount",
+            totalItems
+        );
+
+        let status = "NOT STARTED";
+
+        if (progress >= 90) {
+            status = "CHECKRIDE READY";
+        } else if (progress >= 75) {
+            status = "FINAL APPROACH";
+        } else if (progress >= 50) {
+            status = "BUILDING";
+        } else if (progress > 0) {
+            status = "IN PROGRESS";
+        }
+
+        setText(
+            "overallProgressLabel",
+            status
+        );
+
+        const messages = {
+            "NOT STARTED":
+                "Begin today's mission.",
+            "IN PROGRESS":
+                "Training systems are coming online.",
+            "BUILDING":
+                "Good. Now attack the weak areas.",
+            "FINAL APPROACH":
+                "You are entering final checkride preparation.",
+            "CHECKRIDE READY":
+                "Maintain proficiency. Do not get complacent."
+        };
+
+        setText(
+            "overallProgressMessage",
+            messages[status]
+        );
+    }
+
+
+    function getTotalTrackedItems() {
+        return (
+            state.modules.reading.total +
+            state.modules.acs.total +
+            state.modules.prepware.answered +
+            state.modules.oral.sessions +
+            Object.keys(state.requirements).length
+        );
+    }
+
+
+    function getCompletedTrackedItems() {
+        return (
+            state.modules.reading.completed +
+            state.modules.acs.completed +
+            state.modules.prepware.correct +
+            Math.round(
+                state.modules.oral.sessions *
+                state.modules.oral.readiness /
+                100
+            ) +
+            Object.values(
+                state.requirements
+            ).filter(Boolean).length
+        );
+    }
+
+
+    /* =========================================================
+       MODULE PROGRESS
+       ========================================================= */
+
+    function getReadingProgress() {
+        return percent(
+            state.modules.reading.completed,
+            state.modules.reading.total
+        );
+    }
+
+
+    function getAcsProgress() {
+        return percent(
+            state.modules.acs.completed,
+            state.modules.acs.total
+        );
+    }
+
+
+    function getPrepwareProgress() {
+        return percent(
+            state.modules.prepware.correct,
+            state.modules.prepware.answered
+        );
+    }
+
+
+    function getOralProgress() {
+        return clamp(
+            state.modules.oral.readiness,
+            0,
+            100
+        );
+    }
+
+
+    function getRequirementProgress() {
+        const values =
+            Object.values(state.requirements);
+
+        if (!values.length) {
+            return 0;
+        }
+
+        return Math.round(
+            values.filter(Boolean).length /
+            values.length *
+            100
+        );
+    }
+
+
+    function renderModules() {
+        const readingProgress =
+            getReadingProgress();
+
+        const acsProgress =
+            getAcsProgress();
+
+        const prepwareProgress =
+            getPrepwareProgress();
+
+        const oralProgress =
+            getOralProgress();
+
+        setText(
+            "readingProgressPercentage",
+            `${readingProgress}%`
+        );
+
+        setProgress(
+            "readingProgressBar",
+            readingProgress
+        );
+
+        setText(
+            "readingCompletedCount",
+            `${state.modules.reading.completed} / ${state.modules.reading.total} complete`
+        );
+
+        setText(
+            "acsProgressPercentage",
+            `${acsProgress}%`
+        );
+
+        setProgress(
+            "acsProgressBar",
+            acsProgress
+        );
+
+        setText(
+            "acsCompletedCount",
+            `${state.modules.acs.completed} / ${state.modules.acs.total} complete`
+        );
+
+        setText(
+            "prepwareAccuracyPercentage",
+            `${prepwareProgress}%`
+        );
+
+        setProgress(
+            "prepwareProgressBar",
+            prepwareProgress
+        );
+
+        setText(
+            "prepwareQuestionCount",
+            `${state.modules.prepware.answered} questions`
+        );
+
+        setText(
+            "oralProgressPercentage",
+            `${oralProgress}%`
+        );
+
+        setProgress(
+            "oralProgressBar",
+            oralProgress
+        );
+
+        setText(
+            "oralSessionCount",
+            `${state.modules.oral.sessions} sessions`
+        );
+    }
+
+
+    function bindModuleControls() {
+        const moduleButtons = {
+            openReadingButton: "reading",
+            openAcsButton: "acs",
+            openPrepwareButton: "prepware",
+            openOralButton: "oral"
+        };
+
+        Object.entries(moduleButtons).forEach(
+            ([buttonId, module]) => {
+                if (exists(buttonId)) {
+                    $(buttonId).addEventListener(
+                        "click",
+                        () => openModule(module)
+                    );
+                }
+            }
+        );
+
+        const menuButtons = {
+            readingMenuButton: "reading",
+            acsMenuButton: "acs",
+            prepwareMenuButton: "prepware",
+            oralMenuButton: "oral"
+        };
+
+        Object.entries(menuButtons).forEach(
+            ([buttonId, module]) => {
+                if (exists(buttonId)) {
+                    $(buttonId).addEventListener(
+                        "click",
+                        () => openModule(module)
+                    );
+                }
+            }
+        );
+
+        if (exists("viewAllModulesButton")) {
+            $("viewAllModulesButton").addEventListener(
+                "click",
+                () => {
+                    const target =
+                        $("preparationSection");
+
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: "smooth"
+                        });
+                    }
+                }
+            );
+        }
+    }
+
+
+    function openModule(module) {
+        const configs = {
+            reading: {
+                kicker: "KNOWLEDGE BASE",
+                title: "Reading",
+                description:
+                    "Track the regulations, aircraft information, POH material, and other references you need before the oral.",
+                button: "Configure Reading"
+            },
+
+            acs: {
+                kicker: "STANDARDS",
+                title: "Airman Certification Standards",
+                description:
+                    "Track ACS tasks and identify areas where you are not yet consistently proficient.",
+                button: "Configure ACS"
+            },
+
+            prepware: {
+                kicker: "KNOWLEDGE TEST",
+                title: "Prepware",
+                description:
+                    "Record question-bank performance and use accuracy to identify knowledge gaps.",
+                button: "Record Session"
+            },
+
+            oral: {
+                kicker: "ORAL EXAM",
+                title: "Mock Oral",
+                description:
+                    "Use this module to record mock oral sessions and examiner-style readiness.",
+                button: "Record Oral"
+            }
+        };
+
+        const config = configs[module];
+
+        if (!config) {
+            return;
+        }
+
+        setText(
+            "moduleModalKicker",
+            config.kicker
+        );
+
+        setText(
+            "moduleModalTitle",
+            config.title
+        );
+
+        const content = $("moduleModalContent");
+
+        if (content) {
+            content.innerHTML = `
+                <div class="module-placeholder">
+                    <p>${escapeHTML(config.description)}</p>
+
+                    <div class="module-placeholder-stat">
+                        <span>Current progress</span>
+                        <strong>${getModuleProgress(module)}%</strong>
+                    </div>
+
+                    <div class="module-placeholder-actions">
+                        ${
+                            module === "reading"
+                                ? `
+                                    <label class="form-field">
+                                        <span>Completed items</span>
+                                        <input
+                                            id="moduleReadingCompletedInput"
+                                            type="number"
+                                            min="0"
+                                            value="${state.modules.reading.completed}"
+                                        >
+                                    </label>
+
+                                    <label class="form-field">
+                                        <span>Total items</span>
+                                        <input
+                                            id="moduleReadingTotalInput"
+                                            type="number"
+                                            min="0"
+                                            value="${state.modules.reading.total}"
+                                        >
+                                    </label>
+                                `
+                                : ""
+                        }
+
+                        ${
+                            module === "acs"
+                                ? `
+                                    <label class="form-field">
+                                        <span>Completed tasks</span>
+                                        <input
+                                            id="moduleAcsCompletedInput"
+                                            type="number"
+                                            min="0"
+                                            value="${state.modules.acs.completed}"
+                                        >
+                                    </label>
+
+                                    <label class="form-field">
+                                        <span>Total tasks</span>
+                                        <input
+                                            id="moduleAcsTotalInput"
+                                            type="number"
+                                            min="0"
+                                            value="${state.modules.acs.total}"
+                                        >
+                                    </label>
+                                `
+                                : ""
+                        }
+
+                        ${
+                            module === "prepware"
+                                ? `
+                                    <label class="form-field">
+                                        <span>Questions answered</span>
+                                        <input
+                                            id="modulePrepwareAnsweredInput"
+                                            type="number"
+                                            min="0"
+                                            value="${state.modules.prepware.answered}"
+                                        >
+                                    </label>
+
+                                    <label class="form-field">
+                                        <span>Correct answers</span>
+                                        <input
+                                            id="modulePrepwareCorrectInput"
+                                            type="number"
+                                            min="0"
+                                            value="${state.modules.prepware.correct}"
+                                        >
+                                    </label>
+                                `
+                                : ""
+                        }
+
+                        ${
+                            module === "oral"
+                                ? `
+                                    <label class="form-field">
+                                        <span>Sessions completed</span>
+                                        <input
+                                            id="moduleOralSessionsInput"
+                                            type="number"
+                                            min="0"
+                                            value="${state.modules.oral.sessions}"
+                                        >
+                                    </label>
+
+                                    <label class="form-field">
+                                        <span>Readiness</span>
+                                        <input
+                                            id="moduleOralReadinessInput"
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            value="${state.modules.oral.readiness}"
+                                        >
+                                    </label>
+                                `
+                                : ""
+                        }
+                    </div>
+                </div>
+            `;
+
+            const button =
+                $("moduleModalPrimaryButton");
+
+            if (button) {
+                button.textContent =
+                    config.button;
+
+                button.onclick = () => {
+                    saveModuleData(module);
+                };
             }
         }
-    );
-}
 
-
-/* =========================================================
-   RENDER ALL
-   ========================================================= */
-
-function renderAll() {
-    updateCountdown();
-    updateProgressTheme();
-
-    renderProgress();
-    renderStats();
-
-    renderReadingTasks();
-    renderACS();
-    renderDailyMission();
-
-    renderPrepware();
-    renderOralSessions();
-
-    renderFlightRequirements();
-    renderWritten();
-
-    renderWeakAreas();
-}
-
-
-/* =========================================================
-   INITIALIZATION
-   ========================================================= */
-
-function initializeApp() {
-    setupModals();
-    setupPrepwareForm();
-    setupOralForm();
-    setupReset();
-    setupExport();
-    setupKeyboardShortcuts();
-
-    renderAll();
-
-    window.setInterval(
-        updateCountdown,
-        30_000
-    );
-
-    console.log(
-        "%cFINAL APPROACH",
-        "color:#5ec8ff;font-weight:800;font-size:18px;"
-    );
-
-    console.log(
-        "PPL checkride mission control initialized."
-    );
-}
-
-
-/* =========================================================
-   START
-   ========================================================= */
-
-if (
-    document.readyState === "loading"
-) {
-    document.addEventListener(
-        "DOMContentLoaded",
-        initializeApp
-    );
-} else {
-    initializeApp();
-}
-
-
-/* =========================================================
-   PUBLIC DEBUG API
-   =========================================================
-   
-   Useful while developing in GitHub Pages.
-   
-   Examples:
-   
-   FinalApproach.getState()
-   FinalApproach.complete("phak-systems")
-   FinalApproach.addPrepware("Weather", 92)
-   FinalApproach.addOral("Weather Oral", ["METAR", "TAF"], 88)
-   FinalApproach.reset()
-   
-   ========================================================= */
-
-window.FinalApproach = {
-
-    getState() {
-        return clone(state);
-    },
-
-    complete(id) {
-        setTaskComplete(id, true);
-    },
-
-    uncomplete(id) {
-        setTaskComplete(id, false);
-    },
-
-    addPrepware(category, score, questions = null) {
-        return addPrepwareAttempt({
-            category,
-            score,
-            questions
-        });
-    },
-
-    addOral(
-        title,
-        topics = [],
-        score = null,
-        notes = ""
-    ) {
-        addOralSession({
-            title,
-            topics,
-            score,
-            notes
-        });
-    },
-
-    getProgress() {
-        return {
-            overall: getOverallProgress(),
-            reading: getReadingProgress(),
-            acs: getACSProgress(),
-            prepware: getPrepwareProgress(),
-            oral: getOralProgress(),
-            flight: getFlightProgress()
-        };
-    },
-
-    reset() {
-        resetAllData();
+        openModal("moduleModal");
     }
-};
+
+
+    function getModuleProgress(module) {
+        switch (module) {
+            case "reading":
+                return getReadingProgress();
+
+            case "acs":
+                return getAcsProgress();
+
+            case "prepware":
+                return getPrepwareProgress();
+
+            case "oral":
+                return getOralProgress();
+
+            default:
+                return 0;
+        }
+    }
+
+
+    function saveModuleData(module) {
+        switch (module) {
+            case "reading": {
+                const completed = Number(
+                    getInputValue(
+                        "moduleReadingCompletedInput"
+                    )
+                );
+
+                const total = Number(
+                    getInputValue(
+                        "moduleReadingTotalInput"
+                    )
+                );
+
+                state.modules.reading.completed =
+                    Math.max(
+                        0,
+                        Number.isFinite(completed)
+                            ? completed
+                            : 0
+                    );
+
+                state.modules.reading.total =
+                    Math.max(
+                        0,
+                        Number.isFinite(total)
+                            ? total
+                            : 0
+                    );
+
+                if (
+                    state.modules.reading.completed >
+                    state.modules.reading.total
+                ) {
+                    state.modules.reading.completed =
+                        state.modules.reading.total;
+                }
+
+                break;
+            }
+
+            case "acs": {
+                const completed = Number(
+                    getInputValue(
+                        "moduleAcsCompletedInput"
+                    )
+                );
+
+                const total = Number(
+                    getInputValue(
+                        "moduleAcsTotalInput"
+                    )
+                );
+
+                state.modules.acs.completed =
+                    Math.max(
+                        0,
+                        Number.isFinite(completed)
+                            ? completed
+                            : 0
+                    );
+
+                state.modules.acs.total =
+                    Math.max(
+                        0,
+                        Number.isFinite(total)
+                            ? total
+                            : 0
+                    );
+
+                if (
+                    state.modules.acs.completed >
+                    state.modules.acs.total
+                ) {
+                    state.modules.acs.completed =
+                        state.modules.acs.total;
+                }
+
+                break;
+            }
+
+            case "prepware": {
+                const answered = Number(
+                    getInputValue(
+                        "modulePrepwareAnsweredInput"
+                    )
+                );
+
+                const correct = Number(
+                    getInputValue(
+                        "modulePrepwareCorrectInput"
+                    )
+                );
+
+                state.modules.prepware.answered =
+                    Math.max(
+                        0,
+                        Number.isFinite(answered)
+                            ? answered
+                            : 0
+                    );
+
+                state.modules.prepware.correct =
+                    clamp(
+                        Number.isFinite(correct)
+                            ? correct
+                            : 0,
+                        0,
+                        state.modules.prepware.answered
+                    );
+
+                break;
+            }
+
+            case "oral": {
+                const sessions = Number(
+                    getInputValue(
+                        "moduleOralSessionsInput"
+                    )
+                );
+
+                const readiness = Number(
+                    getInputValue(
+                        "moduleOralReadinessInput"
+                    )
+                );
+
+                state.modules.oral.sessions =
+                    Math.max(
+                        0,
+                        Number.isFinite(sessions)
+                            ? sessions
+                            : 0
+                    );
+
+                state.modules.oral.readiness =
+                    clamp(
+                        Number.isFinite(readiness)
+                            ? readiness
+                            : 0,
+                        0,
+                        100
+                    );
+
+                break;
+            }
+        }
+
+        markStudyDay();
+        recordActivity(
+            "Training data updated",
+            `${module.toUpperCase()} module`
+        );
+
+        scheduleSave();
+        renderEverything();
+
+        closeModal("moduleModal");
+
+        notify(
+            `${module.toUpperCase()} data updated.`,
+            "success"
+        );
+    }
+
+
+    /* =========================================================
+       FLIGHT REQUIREMENTS
+       ========================================================= */
+
+    function bindRequirementControls() {
+        const requirementNames = [
+            "Medical",
+            "Logbook",
+            "Aircraft",
+            "Endorsements",
+            "Practical"
+        ];
+
+        requirementNames.forEach((name) => {
+            const toggle =
+                $(
+                    `requirement${name}Toggle`
+                );
+
+            if (toggle) {
+                toggle.addEventListener(
+                    "click",
+                    () => {
+                        toggleRequirement(
+                            name.toLowerCase()
+                        );
+                    }
+                );
+            }
+
+            const managerToggle =
+                $(
+                    `manager${name}Toggle`
+                );
+
+            if (managerToggle) {
+                managerToggle.addEventListener(
+                    "click",
+                    () => {
+                        toggleRequirement(
+                            name.toLowerCase()
+                        );
+                    }
+                );
+            }
+        });
+
+        if (exists("manageFlightRequirementsButton")) {
+            $("manageFlightRequirementsButton")
+                .addEventListener(
+                    "click",
+                    () => {
+                        renderRequirementsManager();
+                        openModal(
+                            "flightRequirementsModal"
+                        );
+                    }
+                );
+        }
+
+        if (exists("closeRequirementsButton")) {
+            $("closeRequirementsButton")
+                .addEventListener(
+                    "click",
+                    () => closeModal(
+                        "flightRequirementsModal"
+                    )
+                );
+        }
+
+        if (exists("closeFlightRequirementsModalButton")) {
+            $("closeFlightRequirementsModalButton")
+                .addEventListener(
+                    "click",
+                    () => closeModal(
+                        "flightRequirementsModal"
+                    )
+                );
+        }
+    }
+
+
+    function toggleRequirement(requirement) {
+        if (
+            !Object.prototype.hasOwnProperty.call(
+                state.requirements,
+                requirement
+            )
+        ) {
+            return;
+        }
+
+        state.requirements[requirement] =
+            !state.requirements[requirement];
+
+        const label =
+            requirement.charAt(0).toUpperCase() +
+            requirement.slice(1);
+
+        recordActivity(
+            state.requirements[requirement]
+                ? "Requirement completed"
+                : "Requirement reopened",
+            label
+        );
+
+        markStudyDay();
+
+        scheduleSave();
+
+        renderRequirements();
+        renderRequirementsManager();
+        renderOverallProgress();
+        renderMission();
+        renderActivity();
+
+        notify(
+            state.requirements[requirement]
+                ? `${label} marked complete.`
+                : `${label} marked incomplete.`,
+            state.requirements[requirement]
+                ? "success"
+                : "info"
+        );
+    }
+
+
+    function renderRequirements() {
+        const entries = Object.entries(
+            state.requirements
+        );
+
+        const completed =
+            entries.filter(
+                ([, value]) => value
+            ).length;
+
+        setText(
+            "flightRequirementsStatus",
+            `${completed} / ${entries.length} COMPLETE`
+        );
+
+        entries.forEach(
+            ([key, complete]) => {
+                const capitalized =
+                    key.charAt(0).toUpperCase() +
+                    key.slice(1);
+
+                const toggle =
+                    $(
+                        `requirement${capitalized}Toggle`
+                    );
+
+                const status =
+                    $(
+                        `requirement${capitalized}Status`
+                    );
+
+                const item =
+                    $(
+                        `requirement${capitalized}`
+                    );
+
+                if (toggle) {
+                    toggle.setAttribute(
+                        "aria-checked",
+                        String(complete)
+                    );
+
+                    toggle.classList.toggle(
+                        "complete",
+                        complete
+                    );
+                }
+
+                if (status) {
+                    status.textContent =
+                        complete
+                            ? "COMPLETE"
+                            : "PENDING";
+
+                    status.classList.toggle(
+                        "complete",
+                        complete
+                    );
+                }
+
+                if (item) {
+                    item.classList.toggle(
+                        "complete",
+                        complete
+                    );
+                }
+            }
+        );
+    }
+
+
+    function renderRequirementsManager() {
+        Object.entries(
+            state.requirements
+        ).forEach(([key, complete]) => {
+            const capitalized =
+                key.charAt(0).toUpperCase() +
+                key.slice(1);
+
+            const button =
+                $(
+                    `manager${capitalized}Toggle`
+                );
+
+            if (!button) {
+                return;
+            }
+
+            button.setAttribute(
+                "aria-pressed",
+                String(complete)
+            );
+
+            button.classList.toggle(
+                "active",
+                complete
+            );
+
+            const label =
+                button.querySelector(
+                    ".toggle-label"
+                );
+
+            if (label) {
+                label.textContent =
+                    complete
+                        ? "Complete"
+                        : "Incomplete";
+            }
+        });
+    }
+
+
+    /* =========================================================
+       READINESS MATRIX
+       ========================================================= */
+
+    function renderReadinessMatrix() {
+        const values = {
+            knowledge:
+                getPrepwareProgress(),
+
+            regulations:
+                Math.round(
+                    (
+                        getReadingProgress() +
+                        getAcsProgress()
+                    ) / 2
+                ),
+
+            aircraftSystems:
+                Math.round(
+                    (
+                        getAcsProgress() +
+                        getReadingProgress()
+                    ) / 2
+                ),
+
+            performance:
+                getAcsProgress(),
+
+            oral:
+                getOralProgress()
+        };
+
+        Object.entries(values).forEach(
+            ([key, value]) => {
+                const label =
+                    key.charAt(0).toUpperCase() +
+                    key.slice(1);
+
+                setText(
+                    `${key}ReadinessValue`,
+                    `${value}%`
+                );
+
+                setProgress(
+                    `${key}ReadinessBar`,
+                    value
+                );
+
+                const status =
+                    value >= 90
+                        ? "READY"
+                        : value >= 70
+                            ? "DEVELOPING"
+                            : value > 0
+                                ? "INCOMPLETE"
+                                : "NOT STARTED";
+
+                setText(
+                    `${key}ReadinessStatus`,
+                    status
+                );
+            }
+        );
+    }
+
+
+    /* =========================================================
+       STATISTICS
+       ========================================================= */
+
+    function renderStatistics() {
+        const questions =
+            state.modules.prepware.answered;
+
+        const accuracy =
+            getPrepwareProgress();
+
+        const readiness =
+            calculateReadiness();
+
+        const studyHours =
+            Math.floor(
+                state.stats.studyMinutes / 60
+            );
+
+        const studyMinutes =
+            state.stats.studyMinutes % 60;
+
+        setText(
+            "studyStreakValue",
+            state.stats.streak
+        );
+
+        setText(
+            "studyStreakUnit",
+            state.stats.streak === 1
+                ? "day"
+                : "days"
+        );
+
+        setText(
+            "studyStreakTrend",
+            state.stats.streak > 0
+                ? "ACTIVE"
+                : "—"
+        );
+
+        setText(
+            "studyTimeValue",
+            studyHours > 0
+                ? `${studyHours}h ${studyMinutes}m`
+                : `${studyMinutes}m`
+        );
+
+        setText(
+            "studyTimeUnit",
+            "total"
+        );
+
+        setText(
+            "studyTimeTrend",
+            state.stats.studyMinutes > 0
+                ? "ACTIVE"
+                : "—"
+        );
+
+        setText(
+            "questionsAnsweredValue",
+            questions
+        );
+
+        setText(
+            "questionsAnsweredUnit",
+            questions === 1
+                ? "answered"
+                : "answered"
+        );
+
+        setText(
+            "questionsAccuracyValue",
+            `${accuracy}%`
+        );
+
+        setText(
+            "readinessValue",
+            `${readiness}%`
+        );
+
+        setText(
+            "readinessStatus",
+            readiness >= 90
+                ? "READY"
+                : readiness >= 70
+                    ? "BUILDING"
+                    : "DEVELOPING"
+        );
+    }
+
+
+    function markStudyDay() {
+        const today = getDateKey();
+
+        if (
+            !state.stats.studyDays.includes(
+                today
+            )
+        ) {
+            state.stats.studyDays.push(today);
+        }
+
+        state.stats.streak =
+            calculateStudyStreak();
+    }
+
+
+    function calculateStudyStreak() {
+        const days = new Set(
+            state.stats.studyDays
+        );
+
+        let streak = 0;
+        const cursor = new Date();
+
+        while (
+            days.has(
+                getDateKey(cursor)
+            )
+        ) {
+            streak++;
+
+            cursor.setDate(
+                cursor.getDate() - 1
+            );
+        }
+
+        return streak;
+    }
+
+
+    /* =========================================================
+       ACTIVITY
+       ========================================================= */
+
+    function bindActivityControls() {
+        if (exists("clearActivityButton")) {
+            $("clearActivityButton")
+                .addEventListener(
+                    "click",
+                    () => {
+                        if (!state.activity.length) {
+                            return;
+                        }
+
+                        openConfirmation(
+                            "Clear activity history?",
+                            "This removes the activity log but does not reset your progress.",
+                            clearActivity
+                        );
+                    }
+                );
+        }
+    }
+
+
+    function recordActivity(title, detail) {
+        state.activity.unshift({
+            id:
+                Date.now().toString() +
+                Math.random()
+                    .toString(36)
+                    .slice(2),
+
+            title,
+            detail,
+            timestamp:
+                new Date().toISOString()
+        });
+
+        state.activity =
+            state.activity.slice(0, 50);
+    }
+
+
+    function renderActivity() {
+        const list =
+            $("activityList");
+
+        if (!list) {
+            return;
+        }
+
+        const empty =
+            $("emptyActivityState");
+
+        if (!state.activity.length) {
+            if (empty) {
+                empty.hidden = false;
+            }
+
+            list
+                .querySelectorAll(
+                    ".activity-entry"
+                )
+                .forEach(
+                    (element) => element.remove()
+                );
+
+            return;
+        }
+
+        if (empty) {
+            empty.hidden = true;
+        }
+
+        list
+            .querySelectorAll(
+                ".activity-entry"
+            )
+            .forEach(
+                (element) => element.remove()
+            );
+
+        state.activity.forEach(
+            (activity) => {
+                const element =
+                    document.createElement("article");
+
+                element.className =
+                    "activity-entry";
+
+                element.innerHTML = `
+                    <div class="activity-entry-marker">
+                        <span></span>
+                    </div>
+
+                    <div class="activity-entry-content">
+                        <strong>
+                            ${escapeHTML(activity.title)}
+                        </strong>
+
+                        <span>
+                            ${escapeHTML(activity.detail)}
+                        </span>
+
+                        <time datetime="${escapeHTML(activity.timestamp)}">
+                            ${formatRelativeTime(activity.timestamp)}
+                        </time>
+                    </div>
+                `;
+
+                list.appendChild(element);
+            }
+        );
+    }
+
+
+    function formatRelativeTime(timestamp) {
+        const date =
+            new Date(timestamp);
+
+        const seconds =
+            Math.floor(
+                (
+                    Date.now() -
+                    date.getTime()
+                ) / 1000
+            );
+
+        if (seconds < 10) {
+            return "JUST NOW";
+        }
+
+        if (seconds < 60) {
+            return `${seconds}s AGO`;
+        }
+
+        const minutes =
+            Math.floor(
+                seconds / 60
+            );
+
+        if (minutes < 60) {
+            return `${minutes}m AGO`;
+        }
+
+        const hours =
+            Math.floor(
+                minutes / 60
+            );
+
+        if (hours < 24) {
+            return `${hours}h AGO`;
+        }
+
+        const days =
+            Math.floor(
+                hours / 24
+            );
+
+        return `${days}d AGO`;
+    }
+
+
+    function clearActivity() {
+        state.activity = [];
+
+        scheduleSave();
+        renderActivity();
+
+        closeModal("confirmationModal");
+
+        notify(
+            "Activity history cleared.",
+            "info"
+        );
+    }
+
+
+    /* =========================================================
+       MODALS
+       ========================================================= */
+
+    function bindModalControls() {
+        $$("[data-modal-close]").forEach(
+            (element) => {
+                element.addEventListener(
+                    "click",
+                    () => {
+                        const modalId =
+                            element.dataset.modalClose;
+
+                        closeModal(modalId);
+                    }
+                );
+            }
+        );
+
+        if (exists("closeConfirmationModalButton")) {
+            $("closeConfirmationModalButton")
+                .addEventListener(
+                    "click",
+                    () => closeModal(
+                        "confirmationModal"
+                    )
+                );
+        }
+
+        if (exists("cancelConfirmationButton")) {
+            $("cancelConfirmationButton")
+                .addEventListener(
+                    "click",
+                    () => closeModal(
+                        "confirmationModal"
+                    )
+                );
+        }
+
+        if (exists("confirmActionButton")) {
+            $("confirmActionButton")
+                .addEventListener(
+                    "click",
+                    () => {
+                        if (
+                            typeof pendingConfirmationAction ===
+                            "function"
+                        ) {
+                            const action =
+                                pendingConfirmationAction;
+
+                            pendingConfirmationAction =
+                                null;
+
+                            action();
+                        }
+                    }
+                );
+        }
+
+        if (exists("closeModuleModalButton")) {
+            $("closeModuleModalButton")
+                .addEventListener(
+                    "click",
+                    () => closeModal(
+                        "moduleModal"
+                    )
+                );
+        }
+    }
+
+
+    function openModal(id) {
+        const modal = $(id);
+
+        if (!modal) {
+            return;
+        }
+
+        $$(".modal.is-open").forEach(
+            (other) => {
+                if (other !== modal) {
+                    closeModal(other.id);
+                }
+            }
+        );
+
+        modal.hidden = false;
+
+        requestAnimationFrame(() => {
+            modal.classList.add("is-open");
+        });
+
+        document.body.classList.add(
+            "modal-open"
+        );
+    }
+
+
+    function closeModal(id) {
+        const modal = $(id);
+
+        if (!modal) {
+            return;
+        }
+
+        modal.classList.remove("is-open");
+
+        setTimeout(() => {
+            if (!modal.classList.contains("is-open")) {
+                modal.hidden = true;
+            }
+        }, 180);
+
+        if (!$(".modal.is-open")) {
+            document.body.classList.remove(
+                "modal-open"
+            );
+        }
+    }
+
+
+    function openConfirmation(
+        title,
+        message,
+        action
+    ) {
+        setText(
+            "confirmationModalTitle",
+            title
+        );
+
+        setText(
+            "confirmationModalMessage",
+            message
+        );
+
+        pendingConfirmationAction =
+            action;
+
+        openModal(
+            "confirmationModal"
+        );
+    }
+
+
+    /* =========================================================
+       NOTIFICATIONS
+       ========================================================= */
+
+    function notify(
+        message,
+        type = "info",
+        duration = 3500
+    ) {
+        const container =
+            $("notificationContainer");
+
+        if (!container) {
+            return;
+        }
+
+        const notification =
+            document.createElement("div");
+
+        notification.className =
+            `notification notification-${type}`;
+
+        notification.setAttribute(
+            "role",
+            "status"
+        );
+
+        notification.innerHTML = `
+            <span class="notification-indicator"></span>
+            <span class="notification-message">
+                ${escapeHTML(message)}
+            </span>
+
+            <button
+                class="notification-dismiss"
+                type="button"
+                aria-label="Dismiss notification"
+            >
+                ×
+            </button>
+        `;
+
+        container.appendChild(
+            notification
+        );
+
+        requestAnimationFrame(() => {
+            notification.classList.add(
+                "is-visible"
+            );
+        });
+
+        const dismiss =
+            () => removeNotification(
+                notification
+            );
+
+        notification
+            .querySelector(
+                ".notification-dismiss"
+            )
+            ?.addEventListener(
+                "click",
+                dismiss
+            );
+
+        setTimeout(
+            dismiss,
+            duration
+        );
+    }
+
+
+    function removeNotification(
+        notification
+    ) {
+        if (
+            !notification ||
+            !notification.isConnected
+        ) {
+            return;
+        }
+
+        notification.classList.remove(
+            "is-visible"
+        );
+
+        setTimeout(
+            () => notification.remove(),
+            250
+        );
+    }
+
+
+    function toggleNotificationPanel() {
+        notify(
+            "No new mission alerts.",
+            "info"
+        );
+    }
+
+
+    /* =========================================================
+       DATA EXPORT / IMPORT
+       ========================================================= */
+
+    function exportData() {
+        const exportPayload = {
+            app: "Final Approach",
+            version: APP_VERSION,
+            exportedAt:
+                new Date().toISOString(),
+            state
+        };
+
+        const blob =
+            new Blob(
+                [
+                    JSON.stringify(
+                        exportPayload,
+                        null,
+                        2
+                    )
+                ],
+                {
+                    type:
+                        "application/json"
+                }
+            );
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const anchor =
+            document.createElement("a");
+
+        anchor.href = url;
+
+        anchor.download =
+            `final-approach-${getDateKey()}.json`;
+
+        document.body.appendChild(
+            anchor
+        );
+
+        anchor.click();
+        anchor.remove();
+
+        URL.revokeObjectURL(url);
+
+        notify(
+            "Mission data exported.",
+            "success"
+        );
+    }
+
+
+    async function importData(event) {
+        const file =
+            event.target.files?.[0];
+
+        if (!file) {
+            return;
+        }
+
+        try {
+            const text =
+                await file.text();
+
+            const imported =
+                JSON.parse(text);
+
+            const importedState =
+                imported.state ||
+                imported;
+
+            state = deepMerge(
+                structuredClone(
+                    DEFAULT_STATE
+                ),
+                importedState
+            );
+
+            normalizeState();
+            saveState();
+            renderEverything();
+
+            notify(
+                "Mission data imported.",
+                "success"
+            );
+        } catch (error) {
+            console.error(
+                "Final Approach: import failed.",
+                error
+            );
+
+            notify(
+                "Import failed. The file may be invalid.",
+                "error"
+            );
+        }
+
+        event.target.value = "";
+    }
+
+
+    function resetData() {
+        localStorage.removeItem(
+            STORAGE_KEY
+        );
+
+        state =
+            structuredClone(
+                DEFAULT_STATE
+            );
+
+        normalizeState();
+        renderEverything();
+
+        closeModal(
+            "confirmationModal"
+        );
+
+        notify(
+            "All local mission data reset.",
+            "success"
+        );
+    }
+
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+
+    function renderLastSaved() {
+        if (!exists("lastSavedDisplay")) {
+            return;
+        }
+
+        if (!state.lastSaved) {
+            setText(
+                "lastSavedDisplay",
+                "LAST SAVED: --"
+            );
+
+            return;
+        }
+
+        const date =
+            new Date(
+                state.lastSaved
+            );
+
+        setText(
+            "lastSavedDisplay",
+            `LAST SAVED: ${date.toLocaleTimeString(
+                [],
+                {
+                    hour: "numeric",
+                    minute: "2-digit"
+                }
+            )}`
+        );
+    }
+
+
+    function renderFooter() {
+        setText(
+            "appVersionDisplay",
+            `v${APP_VERSION}`
+        );
+    }
+
+
+    /* =========================================================
+       KEYBOARD / ACCESSIBILITY
+       ========================================================= */
+
+    function bindKeyboardControls() {
+        document.addEventListener(
+            "keydown",
+            (event) => {
+                if (
+                    event.key !== "Escape"
+                ) {
+                    return;
+                }
+
+                const openModal =
+                    $(".modal.is-open");
+
+                if (openModal) {
+                    closeModal(
+                        openModal.id
+                    );
+                }
+            }
+        );
+    }
+
+
+    /* =========================================================
+       DOM VALUE HELPERS
+       ========================================================= */
+
+    function setText(
+        id,
+        value
+    ) {
+        const element = $(id);
+
+        if (element) {
+            element.textContent =
+                String(value ?? "");
+        }
+    }
+
+
+    function setInputValue(
+        id,
+        value
+    ) {
+        const element = $(id);
+
+        if (element) {
+            element.value =
+                value ?? "";
+        }
+    }
+
+
+    function getInputValue(id) {
+        const element = $(id);
+
+        return element
+            ? element.value
+            : "";
+    }
+
+
+    function setProgress(
+        id,
+        value
+    ) {
+        const element = $(id);
+
+        if (!element) {
+            return;
+        }
+
+        const normalized =
+            clamp(
+                Number(value) || 0,
+                0,
+                100
+            );
+
+        element.style.width =
+            `${normalized}%`;
+
+        element.setAttribute(
+            "aria-valuenow",
+            String(normalized)
+        );
+
+        element.dataset.progress =
+            String(normalized);
+    }
+
+
+    /* =========================================================
+       GLOBAL APP API
+       Useful for debugging from DevTools.
+       ========================================================= */
+
+    window.FinalApproach = {
+        getState: () =>
+            structuredClone(state),
+
+        save: () => {
+            saveState();
+            renderEverything();
+        },
+
+        reset: () => {
+            openConfirmation(
+                "Reset all local data?",
+                "This will erase your Final Approach progress, settings, activity, and statistics.",
+                resetData
+            );
+        },
+
+        notify,
+
+        refresh: renderEverything
+    };
+
+})();
